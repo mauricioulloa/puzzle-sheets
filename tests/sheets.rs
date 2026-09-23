@@ -50,14 +50,11 @@ async fn stub_random(State(seen): State<Seen>, RawQuery(query): RawQuery) -> Jso
         .find_map(|pair| pair.strip_prefix("count="))
         .and_then(|value| value.parse().ok())
         .unwrap_or(1);
-    // A theme that barely exists on a sparse board, as kingside attacks do.
-    let starved = query.contains("kingsideAttack") && query.contains("maxPieces");
-    let available = if starved { 1 } else { count };
     seen.lock().unwrap().push(query);
     let puzzles: Vec<Value> = ["00008", "000Zo"]
         .iter()
         .cycle()
-        .take(available)
+        .take(count)
         .filter_map(|id| puzzle(id))
         .collect();
     Json(json!({"count": puzzles.len(), "puzzles": puzzles}))
@@ -148,46 +145,21 @@ async fn a_level_and_theme_become_a_permanent_sheet_address() {
     );
 
     let query = seen.lock().unwrap().pop().expect("the API was asked");
-    for expected in [
-        "themes=mateIn1",
-        "ratingMin=400",
-        "ratingMax=1000",
-        "maxPieces=12",
-        "count=2",
-    ] {
+    for expected in ["themes=mateIn1", "ratingMin=0", "ratingMax=999", "count=2"] {
         assert!(query.contains(expected), "{expected} missing from {query}");
     }
 }
 
 #[tokio::test]
-async fn any_theme_asks_for_none_and_upper_levels_are_uncapped() {
+async fn any_theme_asks_for_none_and_a_level_is_only_a_rating_band() {
     let (app, seen) = app().await;
     get_page(&app, "/sheet/new?level=advanced").await;
 
     let query = seen.lock().unwrap().pop().expect("the API was asked");
     assert!(!query.contains("themes="), "{query}");
     assert!(!query.contains("maxPieces"), "{query}");
-    assert!(query.contains("ratingMin=1700"), "{query}");
-}
-
-#[tokio::test]
-async fn a_starved_piece_cap_is_filled_without_it() {
-    let (app, seen) = app().await;
-    let (_, _, location) = get_page(
-        &app,
-        "/sheet/new?level=beginner&theme=kingsideAttack&count=2",
-    )
-    .await;
-
-    assert!(
-        location
-            .expect("redirect")
-            .starts_with("/sheet?ids=00008%2C000Zo&"),
-        "the sheet is full, the capped puzzle first"
-    );
-    let queries = seen.lock().unwrap();
-    assert_eq!(queries.len(), 2);
-    assert!(!queries[1].contains("maxPieces"), "{}", queries[1]);
+    assert!(query.contains("ratingMin=1800"), "{query}");
+    assert!(query.contains("ratingMax=2199"), "{query}");
 }
 
 #[tokio::test]
@@ -200,7 +172,7 @@ async fn each_puzzle_says_who_moves_what_to_find_and_its_fen() {
     .await;
 
     assert_eq!(status, StatusCode::OK);
-    assert!(html.contains("Difficulty: Novice · Theme: Fork"));
+    assert!(html.contains("Difficulty: Novice (1000–1399) · Theme: Fork"));
     assert!(html.contains("Win decisively"));
     assert!(html.contains("Mate in 1"));
     // Black to move: the marker is filled and sits at the top.

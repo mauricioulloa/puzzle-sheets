@@ -65,24 +65,8 @@ pub async fn create(api: &ChessApi, request: Request) -> Result<Created, Workshe
             .collect(),
         rating_min: level.rating_min,
         rating_max: level.rating_max,
-        max_pieces: level.max_pieces,
     };
-    let mut puzzle_ids = draw(api, &filter, count).await?;
-    // The piece cap is a preference, not a promise: some themes barely exist
-    // on a sparse board (a kingside attack needs pieces to attack with). Fill
-    // the rest without it rather than hand over a half-empty sheet; the
-    // simple positions still come first.
-    if puzzle_ids.len() < count && filter.max_pieces.is_some() {
-        let uncapped = Filter {
-            max_pieces: None,
-            ..filter
-        };
-        for id in draw(api, &uncapped, count).await? {
-            if puzzle_ids.len() < count && !puzzle_ids.contains(&id) {
-                puzzle_ids.push(id);
-            }
-        }
-    }
+    let puzzle_ids = draw(api, &filter, count).await?;
     if puzzle_ids.is_empty() {
         // The API's own wording names ratings and piece counts; a teacher
         // picked a level and a theme, so say it in those terms.
@@ -163,10 +147,15 @@ pub fn sheet_path(address: &SheetAddress) -> String {
     format!("/sheet?{query}")
 }
 
-/// "Difficulty: Novice · Theme: Fork", in the sheet's language.
+/// "Difficulty: Novice (1000–1399) · Theme: Fork", in the sheet's language.
 pub fn subtitle(level: &Level, theme: Option<&Theme>, lang: Lang) -> String {
     let text = lang.text();
-    let mut subtitle = format!("{}: {}", text.difficulty, level.label.get(lang));
+    let mut subtitle = format!(
+        "{}: {} ({})",
+        text.difficulty,
+        level.label.get(lang),
+        level.range()
+    );
     if let Some(theme) = theme {
         subtitle.push_str(&format!(" · {}: {}", text.theme, theme.label.get(lang)));
     }
@@ -230,9 +219,12 @@ mod tests {
         let fork = options::theme("fork");
         assert_eq!(
             subtitle(novice, fork, Lang::Es),
-            "Dificultad: Inicial · Tema: Ataque doble"
+            "Dificultad: Inicial (1000–1399) · Tema: Ataque doble"
         );
-        assert_eq!(subtitle(novice, None, Lang::En), "Difficulty: Novice");
+        assert_eq!(
+            subtitle(novice, None, Lang::En),
+            "Difficulty: Novice (1000–1399)"
+        );
     }
 
     #[test]

@@ -39,7 +39,6 @@ pub struct Filter {
     pub themes: Vec<String>,
     pub rating_min: u32,
     pub rating_max: u32,
-    pub max_pieces: Option<u32>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -84,9 +83,6 @@ impl ChessApi {
         if !filter.themes.is_empty() {
             query.push(("themes", filter.themes.join(",")));
             query.push(("themesMode", "any".to_string()));
-        }
-        if let Some(max) = filter.max_pieces {
-            query.push(("maxPieces", max.to_string()));
         }
         let batch: Batch = self.get("/v1/puzzles/random", &query).await?;
         Ok(batch.puzzles)

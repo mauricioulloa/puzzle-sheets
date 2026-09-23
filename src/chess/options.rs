@@ -1,10 +1,17 @@
 //! What a sheet can be asked for: a difficulty and a theme.
 //!
-//! The two easiest levels cap the pieces on the board, because a low rating
-//! does not mean a simple position: mate-in-ones under 1000 have a median of
-//! nineteen pieces, and a beginner has to scan every one.
+//! The rating is the one truth: every puzzle carries the rating Lichess gives
+//! it, and a level is nothing but a name for a band of it. The bands are
+//! contiguous and never overlap, so a rating belongs to exactly one level,
+//! and chess-puzzle-api's trainer uses the same five. Lichess itself has no
+//! fixed levels; its difficulty is relative to each player's own rating.
+//!
+//! Theme names are Lichess's own, in both languages.
 
 use crate::i18n::Lang;
+
+/// The highest rating chess-puzzle-api accepts.
+const RATING_CEILING: u32 = 4000;
 
 /// A label in Spanish, then English.
 pub struct Label([&'static str; 2]);
@@ -24,7 +31,17 @@ pub struct Level {
     pub label: Label,
     pub rating_min: u32,
     pub rating_max: u32,
-    pub max_pieces: Option<u32>,
+}
+
+impl Level {
+    /// The band as a reader sees it: "< 1000", "1000–1399", "2200+".
+    pub fn range(&self) -> String {
+        match (self.rating_min, self.rating_max) {
+            (0, max) => format!("< {}", max + 1),
+            (min, RATING_CEILING) => format!("{min}+"),
+            (min, max) => format!("{min}–{max}"),
+        }
+    }
 }
 
 pub struct Theme {
@@ -39,37 +56,32 @@ pub const LEVELS: &[Level] = &[
     Level {
         id: "beginner",
         label: Label(["Principiante", "Beginner"]),
-        rating_min: 400,
-        rating_max: 1000,
-        max_pieces: Some(12),
+        rating_min: 0,
+        rating_max: 999,
     },
     Level {
         id: "novice",
         label: Label(["Inicial", "Novice"]),
-        rating_min: 900,
-        rating_max: 1300,
-        max_pieces: Some(16),
+        rating_min: 1000,
+        rating_max: 1399,
     },
     Level {
         id: "intermediate",
         label: Label(["Intermedio", "Intermediate"]),
-        rating_min: 1300,
-        rating_max: 1700,
-        max_pieces: None,
+        rating_min: 1400,
+        rating_max: 1799,
     },
     Level {
         id: "advanced",
         label: Label(["Avanzado", "Advanced"]),
-        rating_min: 1700,
-        rating_max: 2100,
-        max_pieces: None,
+        rating_min: 1800,
+        rating_max: 2199,
     },
     Level {
         id: "expert",
         label: Label(["Experto", "Expert"]),
-        rating_min: 2100,
-        rating_max: 2800,
-        max_pieces: None,
+        rating_min: 2200,
+        rating_max: RATING_CEILING,
     },
 ];
 
@@ -124,7 +136,7 @@ pub const THEMES: &[Theme] = &[
     },
     Theme {
         id: "skewer",
-        label: Label(["Enfilada", "Skewer"]),
+        label: Label(["Pincho", "Skewer"]),
     },
     Theme {
         id: "discoveredAttack",
@@ -132,7 +144,7 @@ pub const THEMES: &[Theme] = &[
     },
     Theme {
         id: "xRayAttack",
-        label: Label(["Rayos X", "X-ray"]),
+        label: Label(["Ataque por rayos X", "X-Ray attack"]),
     },
     Theme {
         id: "deflection",
@@ -156,19 +168,19 @@ pub const THEMES: &[Theme] = &[
     },
     Theme {
         id: "kingsideAttack",
-        label: Label(["Ataque al flanco de rey", "Kingside attack"]),
+        label: Label(["Ataque en el flanco de rey", "Kingside attack"]),
     },
     Theme {
         id: "queensideAttack",
-        label: Label(["Ataque al flanco de dama", "Queenside attack"]),
+        label: Label(["Ataque en el flanco de dama", "Queenside attack"]),
     },
     Theme {
         id: "defensiveMove",
-        label: Label(["Jugada defensiva", "Defensive move"]),
+        label: Label(["Movimiento defensivo", "Defensive move"]),
     },
     Theme {
         id: "equality",
-        label: Label(["Igualar", "Equality"]),
+        label: Label(["Igualdad", "Equality"]),
     },
     Theme {
         id: "zugzwang",
@@ -189,15 +201,26 @@ mod tests {
     use super::*;
 
     #[test]
-    fn levels_climb_without_gaps() {
+    fn every_rating_belongs_to_exactly_one_level() {
+        assert_eq!(LEVELS[0].rating_min, 0);
+        assert_eq!(LEVELS[LEVELS.len() - 1].rating_max, RATING_CEILING);
         for pair in LEVELS.windows(2) {
-            assert!(pair[0].rating_min < pair[1].rating_min);
-            assert!(
-                pair[1].rating_min <= pair[0].rating_max,
-                "no band is skipped"
+            assert_eq!(
+                pair[1].rating_min,
+                pair[0].rating_max + 1,
+                "no gap, no overlap"
             );
         }
         assert!(level(DEFAULT_LEVEL).is_some());
+    }
+
+    #[test]
+    fn a_band_reads_as_numbers() {
+        let ranges: Vec<String> = LEVELS.iter().map(Level::range).collect();
+        assert_eq!(
+            ranges,
+            ["< 1000", "1000–1399", "1400–1799", "1800–2199", "2200+"]
+        );
     }
 
     #[test]

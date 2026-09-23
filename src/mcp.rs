@@ -22,10 +22,10 @@ pub struct ListOptionsArgs {
 pub struct LevelInfo {
     pub id: String,
     pub label: String,
+    /// Lichess puzzle ratings, inclusive. Levels are contiguous: every
+    /// rating belongs to exactly one.
     pub rating_min: u32,
     pub rating_max: u32,
-    /// The most pieces a position may have at this level, if capped.
-    pub max_pieces: Option<u32>,
 }
 
 #[derive(Debug, Serialize, schemars::JsonSchema)]
@@ -42,8 +42,9 @@ pub struct Options {
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 pub struct CreateWorksheetArgs {
-    /// A level id from `list_options`, from `beginner` to `expert`. Defaults
-    /// to `novice`. The two easiest levels keep positions to few pieces.
+    /// A level id from `list_options`, from `beginner` (under 1000) to
+    /// `expert` (2200+), each a band of Lichess puzzle rating. Defaults to
+    /// `novice`, 1000–1399.
     pub level: Option<String>,
     /// A theme id from `list_options`, e.g. `fork` or `mateIn2`. Leave it out
     /// for any theme.
@@ -103,8 +104,8 @@ impl SheetTools {
 
     #[tool(
         name = "list_options",
-        description = "List what a chess worksheet can be made of: difficulty levels, from \
-                       beginner to expert, and tactical themes such as forks or mate in two. \
+        description = "List what a chess worksheet can be made of: difficulty levels, each a \
+                       band of Lichess puzzle rating, and tactical themes such as forks or mate in two. \
                        Call this before create_worksheet."
     )]
     async fn list_options(
@@ -120,7 +121,6 @@ impl SheetTools {
                     label: level.label.get(lang).to_string(),
                     rating_min: level.rating_min,
                     rating_max: level.rating_max,
-                    max_pieces: level.max_pieces,
                 })
                 .collect(),
             themes: THEMES
@@ -188,8 +188,8 @@ impl ServerHandler for SheetTools {
         info.instructions = Some(
             "Makes printable chess worksheets. Call list_options, pick the level and theme \
              that fit the learner, then create_worksheet and give the person the worksheet_url \
-             to open and print. For young children start at beginner, which keeps positions to \
-             few pieces. When a student will use the sheet unsupervised, pass answers=none so \
+             to open and print. Levels are bands of Lichess puzzle rating, so pick the one that \
+             holds the learner's rating. When a student will use the sheet unsupervised, pass answers=none so \
              the solutions are not in front of them."
                 .to_string(),
         );

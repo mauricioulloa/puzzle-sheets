@@ -26,23 +26,26 @@ C).
 
 ## Difficulty and theme
 
-A sheet takes one of five levels and, optionally, one of 25 themes: mates in
-one to five, sacrifices, the four endgame families, forks, pins, skewers and
-the rest of the tactical vocabulary.
+A sheet takes one of five levels and, optionally, one of Lichess's themes:
+mates in one to five, sacrifices, the four endgame families, forks, pins,
+skewers and the rest of the tactical vocabulary, under Lichess's own names.
 
-| Level | Rating | Pieces |
-| --- | --- | --- |
-| `beginner` | 400–1000 | at most 12 |
-| `novice` | 900–1300 | at most 16 |
-| `intermediate` | 1300–1700 | any |
-| `advanced` | 1700–2100 | any |
-| `expert` | 2100–2800 | any |
+The rating is the one truth. Every puzzle carries the rating Lichess gives it,
+and a level is only a name for a band of it. The bands are contiguous, so a
+rating belongs to exactly one level, and chess-puzzle-api's trainer uses the
+same five. Lichess itself has no fixed levels: its difficulty is relative to
+each player's own rating.
 
-The two easiest levels cap the pieces because a low rating does not mean a
-simple position: mate-in-ones under 1000 have a median of nineteen pieces, and
-a beginner has to scan every one. When a theme barely exists on a sparse board
-(a kingside attack needs pieces to attack with), the sheet is filled without
-the cap rather than left half empty.
+| Level | Rating |
+| --- | --- |
+| `beginner` | under 1000 |
+| `novice` | 1000–1399 |
+| `intermediate` | 1400–1799 |
+| `advanced` | 1800–2199 |
+| `expert` | 2200+ |
+
+The sheet prints the band next to the level, so the number is always in
+sight.
 
 ## Links, not files
 

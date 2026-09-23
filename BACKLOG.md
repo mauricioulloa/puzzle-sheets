@@ -30,12 +30,7 @@ ChessMint offers 1, 2, 4, 6 and 12 diagrams to a page. Six is a good default;
 whether teachers want bigger boards for young children, or denser review
 sheets, is a question for users.
 
-### 4. Level bands from real use
-
-The five bands and the two piece caps are a first guess. What teachers
-report as too easy or too hard should move them.
-
-### 5. Theme hints for the student
+### 4. Theme hints for the student
 
 A small "Hint: fork" under a diagram, off by default, for a sheet on any
 theme. The labels already exist in both languages.
@@ -44,7 +39,7 @@ theme. The labels already exist in both languages.
 
 ## Beyond chess
 
-### 6. A second puzzle type
+### 5. A second puzzle type
 
 The sheet already takes any diagram, prompt, detail and solution. Sudoku or
 mazes are the natural next ones, generated here from a seed so a link stays

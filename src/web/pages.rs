@@ -100,7 +100,10 @@ pub fn landing(lang: Lang) -> String {
     };
     let levels: String = LEVELS
         .iter()
-        .map(|level| option(level.id, level.label.get(lang), level.id == DEFAULT_LEVEL))
+        .map(|level| {
+            let label = format!("{} · {}", level.label.get(lang), level.range());
+            option(level.id, &label, level.id == DEFAULT_LEVEL)
+        })
         .collect();
     let themes: String = THEMES
         .iter()
@@ -163,16 +166,7 @@ pub fn error(message: &str, lang: Lang) -> String {
 pub fn llms_txt(base_url: &str) -> String {
     let levels: String = LEVELS
         .iter()
-        .map(|level| {
-            let cap = level
-                .max_pieces
-                .map(|max| format!(", at most {max} pieces"))
-                .unwrap_or_default();
-            format!(
-                "- `{}`: rating {}–{}{cap}.\n",
-                level.id, level.rating_min, level.rating_max
-            )
-        })
+        .map(|level| format!("- `{}`: rating {}.\n", level.id, level.range()))
         .collect();
     let themes: Vec<String> = THEMES
         .iter()
@@ -192,9 +186,9 @@ so opening it again prints the same puzzles and the same solutions.
 
 ## Key concepts
 
-- A sheet takes a difficulty and, optionally, a theme. The two easiest levels
-  cap the pieces on the board, because a low rating alone can still be a
-  crowded middlegame.
+- A sheet takes a difficulty and, optionally, a theme. A level is only a name
+  for a band of Lichess puzzle rating; the bands are contiguous, so every
+  rating belongs to exactly one.
 - `answers=page` (default) puts solutions on a page of their own after each
   page of puzzles, so double-sided printing puts them on the back; `none`
   leaves them out for a student working alone.

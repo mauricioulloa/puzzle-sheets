@@ -34,48 +34,42 @@ body {
 }
 .page:last-of-type { break-after: auto; }
 
-header { display: flex; justify-content: space-between; align-items: baseline; gap: 8mm; }
-h1 { font-size: 15pt; margin: 0 0 4mm; }
-.fields { display: flex; gap: 6mm; white-space: nowrap; }
-.fields span { min-width: 34mm; border-bottom: 1px solid #000; }
+/* A book's typography: serif headings, centred, and nothing else on top. */
+header { text-align: center; margin-bottom: 4mm; }
+h1, h2, .subtitle, .page-number { font-family: "Iowan Old Style", Palatino, Georgia, serif; }
+h1 { font-size: 17pt; margin: 0; }
+.subtitle { margin: 1mm 0 0; font-size: 11pt; }
 
 /* Three fixed rows, with each diagram taking whatever height its row has
-   left after the text. A prompt that wraps or solutions at the foot shrink
-   the boards a little instead of pushing the page onto a second sheet. */
+   left after the text. Solutions at the foot shrink the boards a little
+   instead of pushing the page onto a second sheet. */
 .grid {
   display: grid; grid-template-columns: 1fr 1fr;
   grid-template-rows: repeat(3, minmax(0, 1fr));
-  gap: 3mm 10mm; flex: 1; min-height: 0;
+  gap: 2mm 12mm; flex: 1; min-height: 0;
 }
 
-.item { position: relative; display: flex; flex-direction: column; align-items: center; min-height: 0; }
-.item .number {
-  position: absolute; left: 0; top: 0;
-  font-weight: 700; font-size: 12pt;
-}
-.item svg { flex: 1 1 0; min-height: 0; max-height: 56mm; width: 100%; }
-.item .prompt { margin: 1.5mm 0 0; font-size: 10pt; font-weight: 600; text-align: center; }
+.item { display: flex; flex-direction: column; align-items: center; min-height: 0; }
+.item h2 { font-size: 12pt; margin: 0 0 1mm; }
+.item svg { flex: 1 1 0; min-height: 0; max-height: 58mm; width: 100%; }
+.item .prompt { margin: 1mm 0 0; font-size: 9pt; }
+/* One line, small enough for the longest FEN to fit a column. */
 .item .detail {
-  margin: .5mm 0 0; max-width: 80mm;
-  font: 6.5pt/1.2 ui-monospace, Menlo, Consolas, monospace;
-  word-break: break-all; text-align: center;
+  margin: .3mm 0 0; white-space: nowrap;
+  font: 5pt/1.2 ui-monospace, Menlo, Consolas, monospace; color: #333;
 }
-.item .answer { align-self: stretch; margin: 1.5mm 0 0; border-bottom: 1px solid #000; }
 
 .solutions { margin: 0; padding: 0; list-style: none; }
-.solutions li { margin-bottom: 1.5mm; }
-.solutions .prompt { font-weight: 600; }
+.solutions li { margin-bottom: 1mm; }
 
 .upside-down {
   transform: rotate(180deg);
-  font-size: 8pt; border-top: 1px dashed #000; padding-top: 2mm;
+  font-size: 8pt; border-top: 1px dashed #000; padding-top: 2mm; margin-top: 2mm;
 }
 .upside-down .solutions { columns: 2; column-gap: 8mm; }
 
-.credit { margin: 2mm 0 0; font-size: 7pt; text-align: center; }
-
-.key .solutions { font-size: 11pt; }
-.key .solutions li { margin-bottom: 3mm; }
+.page-number { margin: 2mm 0 0; text-align: center; font-size: 10pt; }
+.credit { margin: .5mm 0 0; font-size: 6.5pt; text-align: center; color: #333; }
 
 @media print {
   body { background: none; }

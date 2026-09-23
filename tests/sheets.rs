@@ -50,11 +50,14 @@ async fn stub_random(State(seen): State<Seen>, RawQuery(query): RawQuery) -> Jso
         .find_map(|pair| pair.strip_prefix("count="))
         .and_then(|value| value.parse().ok())
         .unwrap_or(1);
+    // A theme that barely exists on a sparse board, as kingside attacks do.
+    let starved = query.contains("kingsideAttack") && query.contains("maxPieces");
+    let available = if starved { 1 } else { count };
     seen.lock().unwrap().push(query);
     let puzzles: Vec<Value> = ["00008", "000Zo"]
         .iter()
         .cycle()
-        .take(count)
+        .take(available)
         .filter_map(|id| puzzle(id))
         .collect();
     Json(json!({"count": puzzles.len(), "puzzles": puzzles}))
@@ -129,19 +132,19 @@ async fn get_page(app: &Router, uri: &str) -> (StatusCode, String, Option<String
 }
 
 #[tokio::test]
-async fn a_preset_becomes_a_permanent_sheet_address() {
+async fn a_level_and_theme_become_a_permanent_sheet_address() {
     let (app, seen) = app().await;
     let (status, _, location) = get_page(
         &app,
-        "/sheet/new?preset=mate-in-1&count=2&lang=en&answers=footer",
+        "/sheet/new?level=beginner&theme=mateIn1&count=2&lang=en&answers=none",
     )
     .await;
 
     assert_eq!(status, StatusCode::SEE_OTHER);
     let location = location.expect("redirect");
-    assert!(
-        location.starts_with("/sheet?ids=00008%2C000Zo&lang=en&answers=footer&title=Mate+in+1"),
-        "{location}"
+    assert_eq!(
+        location,
+        "/sheet?ids=00008%2C000Zo&level=beginner&lang=en&answers=none&theme=mateIn1"
     );
 
     let query = seen.lock().unwrap().pop().expect("the API was asked");
@@ -157,29 +160,76 @@ async fn a_preset_becomes_a_permanent_sheet_address() {
 }
 
 #[tokio::test]
+async fn any_theme_asks_for_none_and_upper_levels_are_uncapped() {
+    let (app, seen) = app().await;
+    get_page(&app, "/sheet/new?level=advanced").await;
+
+    let query = seen.lock().unwrap().pop().expect("the API was asked");
+    assert!(!query.contains("themes="), "{query}");
+    assert!(!query.contains("maxPieces"), "{query}");
+    assert!(query.contains("ratingMin=1700"), "{query}");
+}
+
+#[tokio::test]
+async fn a_starved_piece_cap_is_filled_without_it() {
+    let (app, seen) = app().await;
+    let (_, _, location) = get_page(
+        &app,
+        "/sheet/new?level=beginner&theme=kingsideAttack&count=2",
+    )
+    .await;
+
+    assert!(
+        location
+            .expect("redirect")
+            .starts_with("/sheet?ids=00008%2C000Zo&"),
+        "the sheet is full, the capped puzzle first"
+    );
+    let queries = seen.lock().unwrap();
+    assert_eq!(queries.len(), 2);
+    assert!(!queries[1].contains("maxPieces"), "{}", queries[1]);
+}
+
+#[tokio::test]
 async fn each_puzzle_says_who_moves_what_to_find_and_its_fen() {
     let (app, _) = app().await;
-    let (status, html, _) = get_page(&app, "/sheet?ids=00008,000Zo&lang=en").await;
+    let (status, html, _) = get_page(
+        &app,
+        "/sheet?ids=00008,000Zo&lang=en&level=novice&theme=fork",
+    )
+    .await;
 
     assert_eq!(status, StatusCode::OK);
-    assert!(html.contains("White to move · Win decisively"));
-    assert!(html.contains("Black to move · Mate in 1"));
+    assert!(html.contains("Difficulty: Novice · Theme: Fork"));
+    assert!(html.contains("Win decisively"));
+    assert!(html.contains("Mate in 1"));
+    // Black to move: the marker is filled and sits at the top.
+    assert!(html.contains("y=\"0\" width=\"22\" height=\"22\" fill=\"#000\""));
     assert!(html.contains("r6k/pp2r2p/4Rp1Q/3p4/8/1N1P2b1/PqP3PP/7K w - - 0 25"));
     assert!(html.contains("3r2k1/5ppp/8/8/8/8/5PPP/6K1 b - - 0 1"));
 }
 
 #[tokio::test]
-async fn solutions_wait_for_their_own_page() {
+async fn solutions_sit_upside_down_unless_left_out() {
     let (app, _) = app().await;
     let (_, html, _) = get_page(&app, "/sheet?ids=00008,000Zo&lang=en").await;
 
-    let key = html.find("class=\"page key\"").expect("answer page");
-    assert!(html.find("1. Rxe7 Qb1+ 2. Nc1").expect("solution") > key);
+    let footer = html
+        .find("class=\"upside-down\"")
+        .expect("footer solutions");
+    assert!(html.find("1. Rxe7 Qb1+ 2. Nc1").expect("solution") > footer);
 
     let (_, student, _) = get_page(&app, "/sheet?ids=00008,000Zo&lang=en&answers=none").await;
     assert!(
         !student.contains("Rxe7"),
         "a student sheet carries no answers"
+    );
+
+    let (status, _, _) = get_page(&app, "/sheet?ids=00008&answers=page").await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "a separate answer page is gone"
     );
 }
 
@@ -188,7 +238,11 @@ async fn spanish_sheets_read_in_spanish() {
     let (app, _) = app().await;
     let (_, html, _) = get_page(&app, "/sheet?ids=000Zo&lang=es").await;
 
-    assert!(html.contains("Juegan negras · Mate en 1"));
+    assert!(html.contains("Mate en 1"));
+    assert!(
+        html.contains("Dificultad: Inicial"),
+        "novice is the default level"
+    );
     assert!(html.contains("1... Td1#"), "Spanish piece letters");
     assert!(html.contains("lang=\"es\""));
 }
@@ -207,8 +261,9 @@ async fn bad_requests_explain_themselves() {
     for uri in [
         "/sheet?ids=../v1/stats",
         "/sheet?ids=00008&answers=sideways",
-        "/sheet/new?preset=chess-boxing",
-        "/sheet/new?preset=forks&count=13",
+        "/sheet/new?level=grandmaster",
+        "/sheet/new?theme=chessboxing",
+        "/sheet/new?count=13",
     ] {
         let (status, _, _) = get_page(&app, uri).await;
         assert_eq!(status, StatusCode::BAD_REQUEST, "{uri}");
@@ -275,25 +330,29 @@ fn structured(response: &Value) -> &Value {
 }
 
 #[tokio::test]
-async fn agents_can_list_presets_and_make_a_sheet() {
+async fn agents_can_list_options_and_make_a_sheet() {
     let (app, _) = app().await;
 
-    let presets = rpc(
+    let options = rpc(
         &app,
         "tools/call",
-        json!({"name": "list_presets", "arguments": {"lang": "en"}}),
+        json!({"name": "list_options", "arguments": {"lang": "en"}}),
     )
     .await;
-    let listed = structured(&presets)["presets"]
-        .as_array()
-        .expect("presets")
-        .len();
-    assert_eq!(listed, puzzle_sheets::chess::presets::PRESETS.len());
+    let options = structured(&options);
+    assert_eq!(
+        options["levels"].as_array().expect("levels").len(),
+        puzzle_sheets::chess::options::LEVELS.len()
+    );
+    assert_eq!(
+        options["themes"].as_array().expect("themes").len(),
+        puzzle_sheets::chess::options::THEMES.len()
+    );
 
     let created = rpc(
         &app,
         "tools/call",
-        json!({"name": "create_worksheet", "arguments": {"preset": "forks", "count": 2, "answers": "none"}}),
+        json!({"name": "create_worksheet", "arguments": {"level": "beginner", "theme": "fork", "count": 2, "answers": "none"}}),
     )
     .await;
     let url = structured(&created)["worksheet_url"].as_str().expect("url");
@@ -310,12 +369,12 @@ async fn agents_are_told_what_went_wrong() {
     let response = rpc(
         &app,
         "tools/call",
-        json!({"name": "create_worksheet", "arguments": {"preset": "chess-boxing"}}),
+        json!({"name": "create_worksheet", "arguments": {"theme": "chessboxing"}}),
     )
     .await;
     let message = response["error"]["message"].as_str().expect("an error");
     assert!(
-        message.contains("forks"),
-        "it lists the presets that do exist"
+        message.contains("zugzwang"),
+        "it lists the themes that do exist"
     );
 }

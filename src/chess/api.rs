@@ -3,6 +3,9 @@
 use anyhow::{Context, Result};
 use reqwest::StatusCode;
 use serde::Deserialize;
+use std::time::Duration;
+
+const TIMEOUT: Duration = Duration::from_secs(20);
 
 /// Only the fields a worksheet uses.
 #[derive(Debug, Clone, Deserialize)]
@@ -40,7 +43,7 @@ pub struct Filter {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum ApiError {
+pub enum ChessApiError {
     /// The API understood the request and refused it; the message says why.
     #[error("{0}")]
     Rejected(String),
@@ -57,20 +60,31 @@ pub struct ChessApi {
 impl ChessApi {
     pub fn new(base_url: &str, key: Option<String>) -> Self {
         Self {
-            http: reqwest::Client::new(),
+            // A sheet is a page someone is waiting on: better a clear error
+            // than a browser spinning on a request that will never finish.
+            http: reqwest::Client::builder()
+                .timeout(TIMEOUT)
+                .build()
+                .expect("a client with a timeout always builds"),
             base_url: base_url.trim_end_matches('/').to_string(),
             key,
         }
     }
 
-    pub async fn random(&self, filter: &Filter, count: usize) -> Result<Vec<Puzzle>, ApiError> {
+    pub async fn random(
+        &self,
+        filter: &Filter,
+        count: usize,
+    ) -> Result<Vec<Puzzle>, ChessApiError> {
         let mut query = vec![
-            ("themes", filter.themes.join(",")),
-            ("themesMode", "any".to_string()),
             ("ratingMin", filter.rating_min.to_string()),
             ("ratingMax", filter.rating_max.to_string()),
             ("count", count.to_string()),
         ];
+        if !filter.themes.is_empty() {
+            query.push(("themes", filter.themes.join(",")));
+            query.push(("themesMode", "any".to_string()));
+        }
         if let Some(max) = filter.max_pieces {
             query.push(("maxPieces", max.to_string()));
         }
@@ -78,11 +92,11 @@ impl ChessApi {
         Ok(batch.puzzles)
     }
 
-    pub async fn puzzle(&self, id: &str) -> Result<Puzzle, ApiError> {
+    pub async fn puzzle(&self, id: &str) -> Result<Puzzle, ChessApiError> {
         self.get(&format!("/v1/puzzles/{id}"), &[]).await
     }
 
-    pub async fn solution(&self, id: &str) -> Result<Solution, ApiError> {
+    pub async fn solution(&self, id: &str) -> Result<Solution, ChessApiError> {
         self.get(&format!("/v1/puzzles/{id}/solution"), &[]).await
     }
 
@@ -90,7 +104,7 @@ impl ChessApi {
         &self,
         path: &str,
         query: &[(&str, String)],
-    ) -> Result<T, ApiError> {
+    ) -> Result<T, ChessApiError> {
         let mut request = self
             .http
             .get(format!("{}{path}", self.base_url))
@@ -106,7 +120,7 @@ impl ChessApi {
         let status = response.status();
         if status == StatusCode::BAD_REQUEST || status == StatusCode::NOT_FOUND {
             let body: ErrorBody = response.json().await.context("reading the API's error")?;
-            return Err(ApiError::Rejected(body.message));
+            return Err(ChessApiError::Rejected(body.message));
         }
         if !status.is_success() {
             return Err(anyhow::anyhow!("chess-puzzle-api {path} returned {status}").into());

@@ -1,7 +1,7 @@
 # puzzle-sheets
 
 Printable chess worksheets for students and educators, in Spanish and
-English. Free, black and white, and in the public domain.
+English. Free, light on ink, and in the public domain.
 
 **Live at [puzzles.mauriulloa.com](https://puzzles.mauriulloa.com)**
 
@@ -9,50 +9,55 @@ By [Mauri Ulloa](https://mauriulloa.com)
 
 ## What a sheet looks like
 
-Six puzzles to a page. Under each diagram:
+Bare, the way a printed puzzle book looks, and light on ink. Six puzzles to a
+page, each with:
 
-- who moves and what to find, the way chess sites put it: *White to move ·
-  Mate in 2*;
-- the position's FEN, to set it up in any chess program;
-- a line for the answer.
+- its number above the diagram;
+- a board with White at the bottom and hatched dark squares, and a small
+  square beside it saying who moves: filled at the top for Black, empty at
+  the bottom for White;
+- what to find, the way chess sites put it: *Mate in 2*;
+- the position's FEN, to set it up in any chess program.
 
-Solutions go on their own page so a teacher can keep them, upside down at the
-foot of each page as puzzle books do, or nowhere at all for a student working
-alone. Boards are drawn from the solver's side; Spanish sheets use Spanish
-piece letters (R, D, T, A, C).
+Solutions sit upside down at the foot of each page, or are left out for a
+student working alone. Spanish sheets use Spanish piece letters (R, D, T, A,
+C).
 
-## Presets
+## Difficulty and theme
 
-A teacher picks "Mate in 1", not an Elo band and a theme id. Each preset
-caps the number of pieces on the board, because a low rating does not mean a
-simple position: mate-in-ones under 1000 have a median of nineteen pieces,
-and a beginner has to scan every one.
+A sheet takes one of five levels and, optionally, one of 25 themes: mates in
+one to five, sacrifices, the four endgame families, forks, pins, skewers and
+the rest of the tactical vocabulary.
 
-| | |
-| --- | --- |
-| `mate-in-1` | first checkmates, at most 12 pieces |
-| `hanging-pieces` | take the undefended piece |
-| `forks` | the best first tactic to learn |
-| `back-rank` | the king trapped behind its pawns |
-| `mate-in-2` | the opponent's reply has to be seen |
-| `pins-and-skewers` | attacks along a line |
-| `pawn-endgames` | kings and pawns, at most 8 pieces |
+| Level | Rating | Pieces |
+| --- | --- | --- |
+| `beginner` | 400–1000 | at most 12 |
+| `novice` | 900–1300 | at most 16 |
+| `intermediate` | 1300–1700 | any |
+| `advanced` | 1700–2100 | any |
+| `expert` | 2100–2800 | any |
+
+The two easiest levels cap the pieces because a low rating does not mean a
+simple position: mate-in-ones under 1000 have a median of nineteen pieces, and
+a beginner has to scan every one. When a theme barely exists on a sparse board
+(a kingside attack needs pieces to attack with), the sheet is filled without
+the cap rather than left half empty.
 
 ## Links, not files
 
-A sheet is its URL. `/sheet/new?preset=forks` picks puzzles and redirects to
+A sheet is its URL. `/sheet/new` picks puzzles and redirects to
 `/sheet?ids=...`, and that link always prints the same puzzles with the same
-answer key. Nothing is stored.
+solutions. Nothing is stored.
 
 ```
-/sheet/new?preset=forks&count=12&lang=es&answers=footer&title=3º básico
-/sheet/new?themes=pin&rating=1100&maxPieces=12
+/sheet/new?level=beginner&theme=fork&count=12&lang=es&title=3º básico
+/sheet/new?level=advanced&answers=none
 /sheet?ids=00008,00014
 ```
 
 ## For language models
 
-`POST /mcp` is a Model Context Protocol server with `list_presets` and
+`POST /mcp` is a Model Context Protocol server with `list_options` and
 `create_worksheet`, which returns a printable link. An assistant helping a
 teacher, a parent or a student can hand them a sheet instead of describing
 positions in chat. [`/llms.txt`](https://puzzles.mauriulloa.com/llms.txt)
@@ -66,8 +71,8 @@ draws the boards as SVG, lays out the sheet for A4 and Letter alike, and
 leaves PDF to the browser's own print dialog.
 
 The sheet itself does not know it is chess. A puzzle type supplies a diagram,
-a prompt, a detail line and a solution; the layout, answer key and presets
-work the same for whatever comes next.
+a prompt, a detail line and a solution; the layout and the solutions work the
+same for whatever comes next.
 
 ## Self-hosting
 

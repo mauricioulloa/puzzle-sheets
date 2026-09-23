@@ -30,21 +30,10 @@
   .lede { color: var(--muted); margin: 0 0 1.8rem; }
   .lang { float: right; font-size: .9rem; }
 
-  fieldset { border: 0; padding: 0; margin: 0 0 1.5rem; }
-  legend, .field label {
+  fieldset { border: 0; padding: 0; margin: 0 0 1rem; }
+  .field label {
     font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
   }
-  legend { margin-bottom: .5rem; }
-
-  .presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: .6rem; }
-  .preset {
-    display: block; border: 1px solid var(--line); border-radius: 8px; padding: .75rem .85rem;
-    background: var(--panel); cursor: pointer;
-  }
-  .preset:hover { border-color: var(--accent); }
-  .preset:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
-  .preset input { margin: 0 .4rem 0 0; accent-color: var(--accent); }
-  .preset small { display: block; color: var(--muted); margin-top: .2rem; line-height: 1.4; }
 
   .controls { display: flex; gap: .75rem; flex-wrap: wrap; }
   .field { display: flex; flex-direction: column; gap: .3rem; flex: 1 1 11rem; }
@@ -71,10 +60,19 @@
 
   <form action="/sheet/new" method="get">
     <input type="hidden" name="lang" value="__LANG__">
-    <fieldset>
-      <legend>__CHOOSE__</legend>
-      <div class="presets">
-__PRESETS__
+    <fieldset class="controls">
+      <div class="field">
+        <label for="level">__DIFFICULTY__</label>
+        <select id="level" name="level">
+__LEVELS__
+        </select>
+      </div>
+      <div class="field">
+        <label for="theme">__THEME__</label>
+        <select id="theme" name="theme">
+          <option value="">__ANY_THEME__</option>
+__THEMES__
+        </select>
       </div>
     </fieldset>
 
@@ -89,7 +87,6 @@ __PRESETS__
       <div class="field">
         <label for="answers">__ANSWERS__</label>
         <select id="answers" name="answers">
-          <option value="page">__ANSWERS_PAGE__</option>
           <option value="footer">__ANSWERS_FOOTER__</option>
           <option value="none">__ANSWERS_NONE__</option>
         </select>

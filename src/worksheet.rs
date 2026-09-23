@@ -2,17 +2,14 @@
 //! tools, so both make exactly the same sheets.
 //!
 //! A sheet is identified by its URL, which lists the puzzle ids. No sheet is
-//! ever stored: the link reprints the same puzzles and the same answer key.
+//! ever stored: the link reprints the same puzzles and the same solutions.
 
-use crate::chess::api::{ApiError, ChessApi, Filter};
-use crate::chess::presets::{self, Preset};
+use crate::chess::api::{ChessApi, ChessApiError, Filter};
+use crate::chess::options::{self, Level, THEMES, Theme};
 use crate::i18n::Lang;
 use crate::sheet::{Answers, MAX_ITEMS, PER_PAGE};
 
 const MAX_TITLE: usize = 80;
-/// How far either side of a requested rating a custom sheet searches.
-const RATING_TOLERANCE: u32 = 150;
-const RATING_CEILING: u32 = 3500;
 
 #[derive(Debug, thiserror::Error)]
 pub enum WorksheetError {
@@ -22,21 +19,20 @@ pub enum WorksheetError {
     Upstream(anyhow::Error),
 }
 
-impl From<ApiError> for WorksheetError {
-    fn from(err: ApiError) -> Self {
+impl From<ChessApiError> for WorksheetError {
+    fn from(err: ChessApiError) -> Self {
         match err {
-            ApiError::Rejected(message) => Self::Invalid(message),
-            ApiError::Failed(err) => Self::Upstream(err),
+            ChessApiError::Rejected(message) => Self::Invalid(message),
+            ChessApiError::Failed(err) => Self::Upstream(err),
         }
     }
 }
 
 #[derive(Debug, Default)]
 pub struct Request {
-    pub preset: Option<String>,
-    pub themes: Vec<String>,
-    pub rating: Option<u32>,
-    pub max_pieces: Option<u32>,
+    pub level: Option<String>,
+    /// A theme id; none means any theme.
+    pub theme: Option<String>,
     pub count: Option<usize>,
     pub lang: Lang,
     pub answers: Answers,
@@ -46,7 +42,6 @@ pub struct Request {
 pub struct Created {
     /// Path and query of the printable sheet, e.g. `/sheet?ids=...`.
     pub path: String,
-    pub title: String,
     pub puzzle_ids: Vec<String>,
 }
 
@@ -57,98 +52,125 @@ pub async fn create(api: &ChessApi, request: Request) -> Result<Created, Workshe
             "count must be between 1 and {MAX_ITEMS}"
         )));
     }
-
     if let Some(title) = &request.title {
         check_title(title)?;
     }
-    let preset = match request.preset.as_deref() {
-        Some(id) => Some(presets::find(id).ok_or_else(|| {
-            WorksheetError::Invalid(format!("Unknown preset `{id}`. Known: {}", preset_ids()))
-        })?),
-        None => None,
-    };
-    let filter = filter_for(preset, &request)?;
-    let title = match &request.title {
-        Some(title) => title.clone(),
-        None => preset
-            .map_or(request.lang.text().default_title, |preset| {
-                preset.title(request.lang)
-            })
-            .to_string(),
-    };
+    let level = find_level(request.level.as_deref())?;
+    let theme = find_theme(request.theme.as_deref())?;
 
-    let puzzle_ids: Vec<String> = api
-        .random(&filter, count)
-        .await?
-        .into_iter()
-        .map(|puzzle| puzzle.id)
-        .collect();
+    let filter = Filter {
+        themes: theme
+            .map(|theme| theme.id.to_string())
+            .into_iter()
+            .collect(),
+        rating_min: level.rating_min,
+        rating_max: level.rating_max,
+        max_pieces: level.max_pieces,
+    };
+    let mut puzzle_ids = draw(api, &filter, count).await?;
+    // The piece cap is a preference, not a promise: some themes barely exist
+    // on a sparse board (a kingside attack needs pieces to attack with). Fill
+    // the rest without it rather than hand over a half-empty sheet; the
+    // simple positions still come first.
+    if puzzle_ids.len() < count && filter.max_pieces.is_some() {
+        let uncapped = Filter {
+            max_pieces: None,
+            ..filter
+        };
+        for id in draw(api, &uncapped, count).await? {
+            if puzzle_ids.len() < count && !puzzle_ids.contains(&id) {
+                puzzle_ids.push(id);
+            }
+        }
+    }
+    if puzzle_ids.is_empty() {
+        // The API's own wording names ratings and piece counts; a teacher
+        // picked a level and a theme, so say it in those terms.
+        return Err(WorksheetError::Invalid(
+            request.lang.text().no_puzzles.to_string(),
+        ));
+    }
 
     Ok(Created {
-        path: sheet_path(&puzzle_ids, request.lang, request.answers, &title),
-        title,
+        path: sheet_path(&SheetAddress {
+            ids: &puzzle_ids,
+            level,
+            theme,
+            lang: request.lang,
+            answers: request.answers,
+            title: request.title.as_deref(),
+        }),
         puzzle_ids,
     })
 }
 
-/// A preset supplies the defaults; anything the caller names overrides it.
-fn filter_for(preset: Option<&Preset>, request: &Request) -> Result<Filter, WorksheetError> {
-    let themes = if request.themes.is_empty() {
-        preset
-            .map(|preset| {
-                preset
-                    .themes
-                    .iter()
-                    .map(|theme| theme.to_string())
-                    .collect()
-            })
-            .unwrap_or_default()
-    } else {
-        request.themes.clone()
-    };
-    if themes.is_empty() {
-        return Err(WorksheetError::Invalid(format!(
-            "Choose a preset ({}) or name at least one theme.",
-            preset_ids()
-        )));
+/// Up to `count` puzzle ids; an empty slice of the dataset is just none.
+async fn draw(
+    api: &ChessApi,
+    filter: &Filter,
+    count: usize,
+) -> Result<Vec<String>, WorksheetError> {
+    match api.random(filter, count).await {
+        Ok(puzzles) => Ok(puzzles.into_iter().map(|puzzle| puzzle.id).collect()),
+        Err(ChessApiError::Rejected(_)) => Ok(Vec::new()),
+        Err(err) => Err(err.into()),
     }
+}
 
-    let (rating_min, rating_max) = match (request.rating, preset) {
-        (Some(rating), _) => (
-            rating.saturating_sub(RATING_TOLERANCE),
-            (rating + RATING_TOLERANCE).min(RATING_CEILING),
-        ),
-        (None, Some(preset)) => (preset.rating_min, preset.rating_max),
-        (None, None) => (0, RATING_CEILING),
-    };
-
-    Ok(Filter {
-        themes,
-        rating_min,
-        rating_max,
-        max_pieces: request
-            .max_pieces
-            .or(preset.map(|preset| preset.max_pieces)),
+pub fn find_level(id: Option<&str>) -> Result<&'static Level, WorksheetError> {
+    let id = id.unwrap_or(options::DEFAULT_LEVEL);
+    options::level(id).ok_or_else(|| {
+        let known: Vec<&str> = options::LEVELS.iter().map(|level| level.id).collect();
+        WorksheetError::Invalid(format!("Unknown level `{id}`. Known: {}", known.join(", ")))
     })
 }
 
-fn preset_ids() -> String {
-    presets::PRESETS
-        .iter()
-        .map(|preset| preset.id)
-        .collect::<Vec<_>>()
-        .join(", ")
+pub fn find_theme(id: Option<&str>) -> Result<Option<&'static Theme>, WorksheetError> {
+    match id.filter(|id| !id.is_empty()) {
+        None => Ok(None),
+        Some(id) => options::theme(id).map(Some).ok_or_else(|| {
+            let known: Vec<&str> = THEMES.iter().map(|theme| theme.id).collect();
+            WorksheetError::Invalid(format!("Unknown theme `{id}`. Known: {}", known.join(", ")))
+        }),
+    }
 }
 
-pub fn sheet_path(ids: &[String], lang: Lang, answers: Answers, title: &str) -> String {
-    let query = serde_urlencoded::to_string([
-        ("ids", ids.join(",").as_str()),
-        ("lang", lang.code()),
-        ("answers", answers.code()),
-        ("title", title),
-    ])
-    .expect("strings always encode");
+/// Everything a sheet's URL carries.
+pub struct SheetAddress<'a> {
+    pub ids: &'a [String],
+    pub level: &'a Level,
+    pub theme: Option<&'a Theme>,
+    pub lang: Lang,
+    pub answers: Answers,
+    pub title: Option<&'a str>,
+}
+
+pub fn sheet_path(address: &SheetAddress) -> String {
+    let ids = address.ids.join(",");
+    let mut pairs = vec![
+        ("ids", ids.as_str()),
+        ("level", address.level.id),
+        ("lang", address.lang.code()),
+        ("answers", address.answers.code()),
+    ];
+    if let Some(theme) = address.theme {
+        pairs.push(("theme", theme.id));
+    }
+    if let Some(title) = address.title {
+        pairs.push(("title", title));
+    }
+    let query = serde_urlencoded::to_string(pairs).expect("strings always encode");
     format!("/sheet?{query}")
+}
+
+/// "Difficulty: Novice · Theme: Fork", in the sheet's language.
+pub fn subtitle(level: &Level, theme: Option<&Theme>, lang: Lang) -> String {
+    let text = lang.text();
+    let mut subtitle = format!("{}: {}", text.difficulty, level.label.get(lang));
+    if let Some(theme) = theme {
+        subtitle.push_str(&format!(" · {}: {}", text.theme, theme.label.get(lang)));
+    }
+    subtitle
 }
 
 /// Puzzle ids go into upstream URLs, so only plain alphanumerics pass.
@@ -189,33 +211,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn a_preset_supplies_defaults_the_caller_can_override() {
-        let forks = presets::find("forks").unwrap();
-        let request = Request {
-            max_pieces: Some(10),
-            ..Default::default()
-        };
-        let filter = filter_for(Some(forks), &request).unwrap();
-        assert_eq!(filter.themes, ["fork"]);
-        assert_eq!((filter.rating_min, filter.rating_max), (600, 1200));
-        assert_eq!(filter.max_pieces, Some(10));
+    fn a_level_is_required_to_exist_but_defaults_sensibly() {
+        assert_eq!(find_level(None).unwrap().id, options::DEFAULT_LEVEL);
+        assert!(find_level(Some("grandmaster")).is_err());
     }
 
     #[test]
-    fn a_custom_rating_becomes_a_band() {
-        let request = Request {
-            themes: vec!["pin".into()],
-            rating: Some(100),
-            ..Default::default()
-        };
-        let filter = filter_for(None, &request).unwrap();
-        assert_eq!((filter.rating_min, filter.rating_max), (0, 250));
-        assert_eq!(filter.max_pieces, None);
+    fn no_theme_means_any_theme() {
+        assert!(find_theme(None).unwrap().is_none());
+        assert!(find_theme(Some("")).unwrap().is_none());
+        assert_eq!(find_theme(Some("fork")).unwrap().unwrap().id, "fork");
+        assert!(find_theme(Some("chessboxing")).is_err());
     }
 
     #[test]
-    fn nothing_to_go_on_is_an_error() {
-        assert!(filter_for(None, &Request::default()).is_err());
+    fn the_subtitle_reads_in_the_sheets_language() {
+        let novice = options::level("novice").unwrap();
+        let fork = options::theme("fork");
+        assert_eq!(
+            subtitle(novice, fork, Lang::Es),
+            "Dificultad: Inicial · Tema: Ataque doble"
+        );
+        assert_eq!(subtitle(novice, None, Lang::En), "Difficulty: Novice");
     }
 
     #[test]
@@ -228,17 +245,24 @@ mod tests {
     }
 
     #[test]
-    fn the_sheet_path_round_trips_a_title() {
-        let path = sheet_path(
-            &["a".into(), "b".into()],
-            Lang::Es,
-            Answers::Footer,
-            "3º básico & más",
+    fn the_sheet_path_carries_everything_needed_to_reprint() {
+        let path = sheet_path(&SheetAddress {
+            ids: &["a".into(), "b".into()],
+            level: options::level("beginner").unwrap(),
+            theme: options::theme("pin"),
+            lang: Lang::Es,
+            answers: Answers::None,
+            title: Some("3º básico & más"),
+        });
+        assert!(
+            path.starts_with(
+                "/sheet?ids=a%2Cb&level=beginner&lang=es&answers=none&theme=pin&title="
+            ),
+            "{path}"
         );
-        assert!(path.starts_with("/sheet?ids=a%2Cb&lang=es&answers=footer&title="));
         assert_eq!(
             path.matches('&').count(),
-            3,
+            5,
             "the & in the title is encoded"
         );
     }

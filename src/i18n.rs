@@ -45,12 +45,8 @@ impl Lang {
 
 pub struct Text {
     pub default_title: &'static str,
-    pub name: &'static str,
-    pub date: &'static str,
-    pub white_to_move: &'static str,
-    pub black_to_move: &'static str,
-    pub answer: &'static str,
-    pub answers: &'static str,
+    pub difficulty: &'static str,
+    pub theme: &'static str,
     pub print: &'static str,
     pub new_sheet: &'static str,
     pub goal_mate: &'static str,
@@ -60,16 +56,14 @@ pub struct Text {
     pub goal_equality: &'static str,
     pub goal_best_move: &'static str,
     pub licence: &'static str,
+    pub no_puzzles: &'static str,
+    pub service_down: &'static str,
 }
 
 static ES: Text = Text {
     default_title: "Ejercicios de ajedrez",
-    name: "Nombre",
-    date: "Fecha",
-    white_to_move: "Juegan blancas",
-    black_to_move: "Juegan negras",
-    answer: "Respuesta",
-    answers: "Soluciones",
+    difficulty: "Dificultad",
+    theme: "Tema",
     print: "Imprimir",
     new_sheet: "Otra hoja",
     goal_mate: "Da mate",
@@ -79,16 +73,14 @@ static ES: Text = Text {
     goal_equality: "Salva la partida",
     goal_best_move: "Encuentra la mejor jugada",
     licence: "Libre para copiar e imprimir (CC0).",
+    no_puzzles: "No hay suficientes ejercicios de ese tema en esa dificultad. Prueba con otra dificultad o con cualquier tema.",
+    service_down: "El servicio de ejercicios no respondió a tiempo. Inténtalo de nuevo en un momento.",
 };
 
 static EN: Text = Text {
     default_title: "Chess exercises",
-    name: "Name",
-    date: "Date",
-    white_to_move: "White to move",
-    black_to_move: "Black to move",
-    answer: "Answer",
-    answers: "Solutions",
+    difficulty: "Difficulty",
+    theme: "Theme",
     print: "Print",
     new_sheet: "Another sheet",
     goal_mate: "Checkmate",
@@ -98,6 +90,8 @@ static EN: Text = Text {
     goal_equality: "Hold the draw",
     goal_best_move: "Find the best move",
     licence: "Free to copy and print (CC0).",
+    no_puzzles: "There are not enough puzzles on that theme at that difficulty. Try another difficulty, or any theme.",
+    service_down: "The puzzle service did not answer in time. Try again in a moment.",
 };
 
 #[cfg(test)]

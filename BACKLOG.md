@@ -1,9 +1,9 @@
 # Backlog
 
-v0.1 is deliberately small: chess only, seven presets, one layout. What comes
-next should be decided by the teachers, parents and students who use it, so
-most of this list is questions to answer with feedback rather than features
-to build.
+v0.1 is deliberately small: chess only, five levels, 25 themes, one layout.
+What comes next should be decided by the teachers, parents and students who
+use it, so most of this list is questions to answer with feedback rather than
+features to build.
 
 ---
 
@@ -17,27 +17,28 @@ below.
 
 ### 2. Know which sheets are made
 
-Counters in the style of chess-puzzle-api's `/v1/usage`: presets and options
-chosen, per day, nothing about who. Enough to see which topics matter.
+Counters in the style of chess-puzzle-api's `/v1/usage`: levels, themes and
+options chosen, per day, nothing about who. Enough to see which topics matter.
 
 ---
 
 ## The sheet
 
-### 3. Custom sheets from the form
+### 3. More per page, or fewer
 
-The form offers presets only. Themes, rating and a piece cap already work in
-the URL and over MCP; whether the form needs them is a question for users.
+ChessMint offers 1, 2, 4, 6 and 12 diagrams to a page. Six is a good default;
+whether teachers want bigger boards for young children, or denser review
+sheets, is a question for users.
 
-### 4. More presets, and levels within a preset
+### 4. Level bands from real use
 
-"Forks" is one band. Teachers may want the same topic at two or three levels,
-or topics not covered yet: discovered attacks, promotion, mate in 3.
+The five bands and the two piece caps are a first guess. What teachers
+report as too easy or too hard should move them.
 
 ### 5. Theme hints for the student
 
-A small "Hint: fork" under a diagram, off by default. Lichess theme names
-need translating into words a child knows.
+A small "Hint: fork" under a diagram, off by default, for a sheet on any
+theme. The labels already exist in both languages.
 
 ---
 
@@ -55,4 +56,6 @@ reproducible. Build it when someone asks for it, not before.
 
 - **Accounts, saved sheets, progress tracking.** A link is the saved sheet.
 - **Server-side PDF.** The browser prints to PDF perfectly well.
+- **A separate answer page.** Solutions sit upside down at the foot of the
+  page, or are left out; one sheet of paper per sheet of puzzles.
 - **Colour boards.** They waste ink and grey into mush on school printers.

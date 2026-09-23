@@ -2,34 +2,27 @@
 
 pub mod api;
 pub mod board;
-pub mod presets;
+pub mod options;
 
 use crate::i18n::{Lang, Text};
 use crate::sheet::Item;
-use api::{ApiError, ChessApi, Puzzle, Solution};
+use api::{ChessApi, ChessApiError, Puzzle, Solution};
 use futures_util::future::try_join_all;
 
 /// Fetches the puzzles in the order given, each with its solution.
-pub async fn items(api: &ChessApi, ids: &[String], lang: Lang) -> Result<Vec<Item>, ApiError> {
+pub async fn items(api: &ChessApi, ids: &[String], lang: Lang) -> Result<Vec<Item>, ChessApiError> {
     let fetches = ids.iter().map(|id| async move {
         let (puzzle, solution) = tokio::try_join!(api.puzzle(id), api.solution(id))?;
-        Ok::<_, ApiError>(item(&puzzle, &solution, lang))
+        Ok::<_, ChessApiError>(item(&puzzle, &solution, lang))
     });
     try_join_all(fetches).await
 }
 
 pub fn item(puzzle: &Puzzle, solution: &Solution, lang: Lang) -> Item {
-    let text = lang.text();
     let white_to_move = puzzle.solver_color == "white";
-    let side = if white_to_move {
-        text.white_to_move
-    } else {
-        text.black_to_move
-    };
-
     Item {
-        diagram: board::svg(&puzzle.position_fen, !white_to_move),
-        prompt: format!("{side} · {}", goal(&puzzle.themes, text)),
+        diagram: board::svg(&puzzle.position_fen, white_to_move),
+        prompt: goal(&puzzle.themes, lang.text()),
         detail: Some(puzzle.position_fen.clone()),
         solution: numbered(&solution.solution_san, white_to_move, lang),
     }
@@ -143,7 +136,7 @@ mod tests {
     }
 
     #[test]
-    fn a_black_puzzle_is_drawn_from_blacks_side() {
+    fn a_black_puzzle_says_so_with_the_marker() {
         let puzzle = Puzzle {
             id: "x".into(),
             position_fen: "8/8/8/8/8/8/8/K6k b - - 0 1".into(),
@@ -154,9 +147,9 @@ mod tests {
             solution_san: strings(&["Kg2"]),
         };
         let item = item(&puzzle, &solution, Lang::Es);
-        assert_eq!(item.prompt, "Juegan negras · Mate en 1");
+        assert_eq!(item.prompt, "Mate en 1");
         assert_eq!(item.detail.as_deref(), Some(puzzle.position_fen.as_str()));
         assert_eq!(item.solution, "1... Rg2");
-        assert_eq!(item.diagram, board::svg(&puzzle.position_fen, true));
+        assert_eq!(item.diagram, board::svg(&puzzle.position_fen, false));
     }
 }

@@ -2,7 +2,7 @@
 //! parent or a student can hand them a printable sheet instead of describing
 //! positions in chat.
 
-use crate::chess::presets::PRESETS;
+use crate::chess::options::{LEVELS, THEMES};
 use crate::i18n::Lang;
 use crate::sheet::Answers;
 use crate::web::routes::SharedState;
@@ -13,47 +13,47 @@ use rmcp::{ServerHandler, schemars, tool, tool_handler, tool_router};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
-pub struct ListPresetsArgs {
-    /// `es` or `en`. Defaults to `es`.
+pub struct ListOptionsArgs {
+    /// `es` or `en`, for the labels. Defaults to `es`.
     pub lang: Option<String>,
 }
 
 #[derive(Debug, Serialize, schemars::JsonSchema)]
-pub struct PresetInfo {
+pub struct LevelInfo {
     pub id: String,
-    pub title: String,
-    pub description: String,
-    pub themes: Vec<String>,
+    pub label: String,
     pub rating_min: u32,
     pub rating_max: u32,
-    pub max_pieces: u32,
+    /// The most pieces a position may have at this level, if capped.
+    pub max_pieces: Option<u32>,
 }
 
 #[derive(Debug, Serialize, schemars::JsonSchema)]
-pub struct Presets {
-    pub presets: Vec<PresetInfo>,
+pub struct ThemeInfo {
+    pub id: String,
+    pub label: String,
+}
+
+#[derive(Debug, Serialize, schemars::JsonSchema)]
+pub struct Options {
+    pub levels: Vec<LevelInfo>,
+    pub themes: Vec<ThemeInfo>,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 pub struct CreateWorksheetArgs {
-    /// A preset id from `list_presets`, e.g. `forks` or `mate-in-1`. The
-    /// simplest choice for a teacher.
-    pub preset: Option<String>,
-    /// Lichess theme names, instead of or on top of a preset, e.g. `pin`.
-    pub themes: Option<Vec<String>>,
-    /// Target Elo rating; puzzles come from 150 either side. Roughly: 600 is
-    /// a young beginner, 1000 a school player, 1500 a club player.
-    pub rating: Option<u32>,
-    /// At most this many pieces on the board. 8 to 14 keeps positions simple
-    /// enough for children.
-    pub max_pieces: Option<u32>,
+    /// A level id from `list_options`, from `beginner` to `expert`. Defaults
+    /// to `novice`. The two easiest levels keep positions to few pieces.
+    pub level: Option<String>,
+    /// A theme id from `list_options`, e.g. `fork` or `mateIn2`. Leave it out
+    /// for any theme.
+    pub theme: Option<String>,
     /// How many puzzles, 1 to 12. Six fill a page. Defaults to 6.
     pub count: Option<usize>,
     /// `es` or `en`. Defaults to `es`.
     pub lang: Option<String>,
-    /// `page` puts solutions on a separate page (default), `footer` prints
-    /// them upside down at the foot of each page, `none` leaves them out —
-    /// use `none` for a sheet a student should not see the answers to.
+    /// `footer` (default) prints the solutions upside down at the foot of
+    /// each page; `none` leaves them out, for a student working alone.
     pub answers: Option<String>,
     /// Heading printed on the sheet, e.g. a class name.
     pub title: Option<String>,
@@ -63,7 +63,6 @@ pub struct CreateWorksheetArgs {
 pub struct Worksheet {
     /// Open and print this. It is permanent: it always shows these puzzles.
     pub worksheet_url: String,
-    pub title: String,
     pub puzzle_ids: Vec<String>,
 }
 
@@ -102,41 +101,43 @@ impl SheetTools {
     }
 
     #[tool(
-        name = "list_presets",
-        description = "List the teaching presets for chess worksheets — ready-made topics such \
-                       as mate in one or forks, each with a sensible level and a cap on pieces \
-                       so positions stay simple. Call this before create_worksheet."
+        name = "list_options",
+        description = "List what a chess worksheet can be made of: difficulty levels, from \
+                       beginner to expert, and tactical themes such as forks or mate in two. \
+                       Call this before create_worksheet."
     )]
-    async fn list_presets(
+    async fn list_options(
         &self,
-        Parameters(args): Parameters<ListPresetsArgs>,
-    ) -> Result<Json<Presets>, ErrorData> {
+        Parameters(args): Parameters<ListOptionsArgs>,
+    ) -> Result<Json<Options>, ErrorData> {
         let lang = parse_lang(args.lang.as_deref())?;
-        let presets = PRESETS
-            .iter()
-            .map(|preset| PresetInfo {
-                id: preset.id.to_string(),
-                title: preset.title(lang).to_string(),
-                description: preset.description(lang).to_string(),
-                themes: preset
-                    .themes
-                    .iter()
-                    .map(|theme| theme.to_string())
-                    .collect(),
-                rating_min: preset.rating_min,
-                rating_max: preset.rating_max,
-                max_pieces: preset.max_pieces,
-            })
-            .collect();
-        Ok(Json(Presets { presets }))
+        Ok(Json(Options {
+            levels: LEVELS
+                .iter()
+                .map(|level| LevelInfo {
+                    id: level.id.to_string(),
+                    label: level.label.get(lang).to_string(),
+                    rating_min: level.rating_min,
+                    rating_max: level.rating_max,
+                    max_pieces: level.max_pieces,
+                })
+                .collect(),
+            themes: THEMES
+                .iter()
+                .map(|theme| ThemeInfo {
+                    id: theme.id.to_string(),
+                    label: theme.label.get(lang).to_string(),
+                })
+                .collect(),
+        }))
     }
 
     #[tool(
         name = "create_worksheet",
         description = "Make a printable chess worksheet and return its link. Each puzzle shows \
-                       who moves, what to find (e.g. 'Mate in 2') and its FEN; solutions go on \
-                       a separate page unless asked otherwise. Use this when a teacher, parent \
-                       or student wants puzzles on paper or a sheet to practise with."
+                       who moves, what to find (e.g. 'Mate in 2') and its FEN; solutions sit \
+                       upside down at the foot of the page unless asked otherwise. Use this \
+                       when a teacher, parent or student wants puzzles on paper."
     )]
     async fn create_worksheet(
         &self,
@@ -144,14 +145,13 @@ impl SheetTools {
     ) -> Result<Json<Worksheet>, ErrorData> {
         let answers = match args.answers.as_deref() {
             None => Answers::default(),
-            Some(value) => Answers::parse(value)
-                .ok_or_else(|| invalid("answers must be page, footer or none"))?,
+            Some(value) => {
+                Answers::parse(value).ok_or_else(|| invalid("answers must be footer or none"))?
+            }
         };
         let request = worksheet::Request {
-            preset: args.preset,
-            themes: args.themes.unwrap_or_default(),
-            rating: args.rating,
-            max_pieces: args.max_pieces,
+            level: args.level,
+            theme: args.theme,
             count: args.count,
             lang: parse_lang(args.lang.as_deref())?,
             answers,
@@ -160,7 +160,6 @@ impl SheetTools {
         let created = worksheet::create(&self.state.api, request).await?;
         Ok(Json(Worksheet {
             worksheet_url: format!("{}{}", self.state.public_url, created.path),
-            title: created.title,
             puzzle_ids: created.puzzle_ids,
         }))
     }
@@ -186,11 +185,11 @@ impl ServerHandler for SheetTools {
         info.server_info = server_info;
         info.capabilities = ServerCapabilities::builder().enable_tools().build();
         info.instructions = Some(
-            "Makes printable chess worksheets. Call list_presets, pick the one that fits the \
-             learner, then create_worksheet and give the person the worksheet_url to open and \
-             print. For young beginners prefer presets with few pieces over a low rating alone. \
-             When a student will use the sheet unsupervised, pass answers=none so the solutions \
-             are not in front of them."
+            "Makes printable chess worksheets. Call list_options, pick the level and theme \
+             that fit the learner, then create_worksheet and give the person the worksheet_url \
+             to open and print. For young children start at beginner, which keeps positions to \
+             few pieces. When a student will use the sheet unsupervised, pass answers=none so \
+             the solutions are not in front of them."
                 .to_string(),
         );
         info

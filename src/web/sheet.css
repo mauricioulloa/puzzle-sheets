@@ -36,7 +36,10 @@ body {
 
 /* A book's typography: serif headings, centred, and nothing else on top. */
 header { text-align: center; margin-bottom: 4mm; }
-h1, h2, .subtitle, .page-number { font-family: "Iowan Old Style", Palatino, Georgia, serif; }
+h1, h2, .subtitle, .answers .solutions { font-size: 11pt; }
+.answers .solutions li { margin-bottom: 3mm; }
+
+.page-number { font-family: "Iowan Old Style", Palatino, Georgia, serif; }
 h1 { font-size: 17pt; margin: 0; }
 .subtitle { margin: 1mm 0 0; font-size: 11pt; }
 
@@ -67,6 +70,9 @@ h1 { font-size: 17pt; margin: 0; }
   font-size: 8pt; border-top: 1px dashed #000; padding-top: 2mm; margin-top: 2mm;
 }
 .upside-down .solutions { columns: 2; column-gap: 8mm; }
+
+.answers .solutions { font-size: 11pt; }
+.answers .solutions li { margin-bottom: 3mm; }
 
 .page-number { margin: 2mm 0 0; text-align: center; font-size: 10pt; }
 .credit { margin: .5mm 0 0; font-size: 6.5pt; text-align: center; color: #333; }

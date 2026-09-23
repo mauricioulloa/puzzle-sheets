@@ -225,12 +225,16 @@ async fn solutions_sit_upside_down_unless_left_out() {
         "a student sheet carries no answers"
     );
 
-    let (status, _, _) = get_page(&app, "/sheet?ids=00008&answers=page").await;
-    assert_eq!(
-        status,
-        StatusCode::BAD_REQUEST,
-        "a separate answer page is gone"
+    let (_, backed, _) = get_page(&app, "/sheet?ids=00008,000Zo&lang=en&answers=page").await;
+    let answers = backed
+        .find("class=\"page answers\"")
+        .expect("a solutions page");
+    assert!(
+        backed.find("3r2k1/5ppp").unwrap() < answers,
+        "puzzles first"
     );
+    assert!(backed.find("Win decisively: 1. Rxe7").unwrap() > answers);
+    assert!(!backed.contains("class=\"upside-down\""));
 }
 
 #[tokio::test]

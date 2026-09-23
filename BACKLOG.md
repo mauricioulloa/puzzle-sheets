@@ -56,6 +56,4 @@ reproducible. Build it when someone asks for it, not before.
 
 - **Accounts, saved sheets, progress tracking.** A link is the saved sheet.
 - **Server-side PDF.** The browser prints to PDF perfectly well.
-- **A separate answer page.** Solutions sit upside down at the foot of the
-  page, or are left out; one sheet of paper per sheet of puzzles.
 - **Colour boards.** They waste ink and grey into mush on school printers.

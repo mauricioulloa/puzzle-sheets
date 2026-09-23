@@ -53,7 +53,9 @@ pub struct CreateWorksheetArgs {
     /// `es` or `en`. Defaults to `es`.
     pub lang: Option<String>,
     /// `footer` (default) prints the solutions upside down at the foot of
-    /// each page; `none` leaves them out, for a student working alone.
+    /// each page; `page` puts them on a page of their own after each page of
+    /// puzzles, to print on the back; `none` leaves them out, for a student
+    /// working alone.
     pub answers: Option<String>,
     /// Heading printed on the sheet, e.g. a class name.
     pub title: Option<String>,
@@ -145,9 +147,8 @@ impl SheetTools {
     ) -> Result<Json<Worksheet>, ErrorData> {
         let answers = match args.answers.as_deref() {
             None => Answers::default(),
-            Some(value) => {
-                Answers::parse(value).ok_or_else(|| invalid("answers must be footer or none"))?
-            }
+            Some(value) => Answers::parse(value)
+                .ok_or_else(|| invalid("answers must be footer, page or none"))?,
         };
         let request = worksheet::Request {
             level: args.level,

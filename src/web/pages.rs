@@ -20,6 +20,7 @@ struct LandingText {
     count: &'static str,
     answers: &'static str,
     answers_footer: &'static str,
+    answers_page: &'static str,
     answers_none: &'static str,
     sheet_title: &'static str,
     sheet_title_hint: &'static str,
@@ -44,6 +45,7 @@ static ES: LandingText = LandingText {
     count: "Ejercicios",
     answers: "Soluciones",
     answers_footer: "Al pie de la hoja, al revés",
+    answers_page: "En otra hoja (para imprimir atrás)",
     answers_none: "Sin soluciones",
     sheet_title: "Título (opcional)",
     sheet_title_hint: "Ej.: 3º básico — Ataque doble",
@@ -68,6 +70,7 @@ static EN: LandingText = LandingText {
     count: "Puzzles",
     answers: "Solutions",
     answers_footer: "Upside down at the foot of the page",
+    answers_page: "On their own page (to print on the back)",
     answers_none: "No solutions",
     sheet_title: "Title (optional)",
     sheet_title_hint: "e.g. Year 3 — Forks",
@@ -120,6 +123,7 @@ pub fn landing(lang: Lang) -> String {
         .replace("__THEME__", text.theme)
         .replace("__COUNT__", text.count)
         .replace("__ANSWERS_FOOTER__", text.answers_footer)
+        .replace("__ANSWERS_PAGE__", text.answers_page)
         .replace("__ANSWERS_NONE__", text.answers_none)
         .replace("__ANSWERS__", text.answers)
         .replace("__SHEET_TITLE_HINT__", text.sheet_title_hint)
@@ -196,7 +200,9 @@ so opening it again prints the same puzzles and the same solutions.
   cap the pieces on the board, because a low rating alone can still be a
   crowded middlegame.
 - `answers=footer` (default) prints solutions upside down at the foot of each
-  page; `none` leaves them out for a student working alone.
+  page; `page` puts them on a page of their own after each page of puzzles,
+  so double-sided printing puts them on the back; `none` leaves them out for
+  a student working alone.
 - `lang=es|en`. Spanish sheets use Spanish piece letters (R, D, T, A, C); the
   FEN is always standard.
 

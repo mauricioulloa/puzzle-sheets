@@ -19,8 +19,9 @@ page, each with:
 - what to find, the way chess sites put it: *Mate in 2*;
 - the position's FEN, to set it up in any chess program.
 
-Solutions sit upside down at the foot of each page, or are left out for a
-student working alone. Spanish sheets use Spanish piece letters (R, D, T, A,
+Solutions sit upside down at the foot of each page, go on a page of their own
+after each page of puzzles (print double-sided and they land on the back), or
+are left out for a student working alone. Spanish sheets use Spanish piece letters (R, D, T, A,
 C).
 
 ## Difficulty and theme
@@ -51,7 +52,7 @@ solutions. Nothing is stored.
 
 ```
 /sheet/new?level=beginner&theme=fork&count=12&lang=es&title=3º básico
-/sheet/new?level=advanced&answers=none
+/sheet/new?level=advanced&answers=page
 /sheet?ids=00008,00014
 ```
 

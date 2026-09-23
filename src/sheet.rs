@@ -29,6 +29,9 @@ pub enum Answers {
     /// Upside down at the foot of each page, as puzzle books do.
     #[default]
     Footer,
+    /// On a page of their own right after each page of puzzles, so printing
+    /// double-sided puts them on the back.
+    Page,
     None,
 }
 
@@ -36,6 +39,7 @@ impl Answers {
     pub fn parse(value: &str) -> Option<Self> {
         match value {
             "footer" => Some(Self::Footer),
+            "page" => Some(Self::Page),
             "none" => Some(Self::None),
             _ => None,
         }
@@ -44,6 +48,7 @@ impl Answers {
     pub fn code(self) -> &'static str {
         match self {
             Self::Footer => "footer",
+            Self::Page => "page",
             Self::None => "none",
         }
     }
@@ -88,7 +93,7 @@ pub fn render(sheet: &Sheet) -> String {
         if sheet.answers == Answers::Footer {
             body.push_str(&format!(
                 "<footer class=\"upside-down\">{}</footer>",
-                solution_list(first_number, items)
+                solution_list(first_number, items, false)
             ));
         }
         body.push_str(&format!(
@@ -97,6 +102,13 @@ pub fn render(sheet: &Sheet) -> String {
             text.licence
         ));
         body.push_str("</section>");
+        if sheet.answers == Answers::Page {
+            body.push_str(&format!(
+                "<section class=\"page answers\"><header><h1>{title}</h1><p class=\"subtitle\">{}</p></header>{}</section>",
+                text.solutions,
+                solution_list(first_number, items, true)
+            ));
+        }
     }
 
     format!(
@@ -136,15 +148,22 @@ fn render_item(number: usize, item: &Item) -> String {
     )
 }
 
-fn solution_list(first_number: usize, items: &[Item]) -> String {
+/// A page of its own repeats each prompt so it reads alone; the footer sits
+/// under the prompts already, so it keeps to the moves.
+fn solution_list(first_number: usize, items: &[Item], with_prompts: bool) -> String {
     let entries: String = items
         .iter()
         .enumerate()
         .map(|(offset, item)| {
+            let prompt = if with_prompts {
+                format!("{}: ", escape(&item.prompt))
+            } else {
+                String::new()
+            };
             // The number is written out rather than left to the list marker:
             // "6. 1. c4+" reads as two move numbers.
             format!(
-                "<li><strong>{}</strong> — {}</li>",
+                "<li><strong>{}</strong> — {prompt}{}</li>",
                 first_number + offset,
                 escape(&item.solution)
             )
@@ -201,6 +220,25 @@ mod tests {
         assert!(
             html.find("detail 12").unwrap() < second_page,
             "each page's solutions follow its own puzzles"
+        );
+    }
+
+    #[test]
+    fn a_solutions_page_follows_each_page_of_puzzles() {
+        let html = render(&sheet(12, Answers::Page));
+        let pages: Vec<usize> = html
+            .match_indices("<section class=\"page")
+            .map(|(at, _)| at)
+            .collect();
+        assert_eq!(pages.len(), 4, "puzzles, solutions, puzzles, solutions");
+        let at = |needle: &str| html.find(needle).expect(needle);
+        assert!(at("detail 6") < pages[1] && pages[1] < at("SOLUTION-1"));
+        assert!(at("SOLUTION-6") < pages[2] && pages[2] < at("detail 7"));
+        assert!(at("detail 12") < pages[3] && pages[3] < at("SOLUTION-7"));
+        assert!(!html.contains("class=\"upside-down\""));
+        assert!(
+            html.contains("Prompt 1: SOLUTION-1"),
+            "the page reads on its own"
         );
     }
 

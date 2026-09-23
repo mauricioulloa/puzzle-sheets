@@ -50,5 +50,10 @@ reproducible. Build it when someone asks for it, not before.
 ## Not doing, and why
 
 - **Accounts, saved sheets, progress tracking.** A link is the saved sheet.
+- **Criteria beyond rating and theme.** A cap on the pieces was tried and
+  dropped: Lichess's rating and themes are the definitions, and a level is
+  only a name for a band of rating.
+- **Solutions at the foot of the page.** Two choices, a page of their own or
+  none, are enough.
 - **Server-side PDF.** The browser prints to PDF perfectly well.
 - **Colour boards.** They waste ink and grey into mush on school printers.

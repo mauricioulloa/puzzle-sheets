@@ -34,10 +34,10 @@ pub struct Level {
 }
 
 impl Level {
-    /// The band as a reader sees it: "< 1000", "1000–1399", "2200+".
-    pub fn range(&self) -> String {
+    /// The band as a reader sees it: "under 1000", "1000–1399", "2200+".
+    pub fn range(&self, lang: Lang) -> String {
         match (self.rating_min, self.rating_max) {
-            (0, max) => format!("< {}", max + 1),
+            (0, max) => format!("{} {}", lang.text().under, max + 1),
             (min, RATING_CEILING) => format!("{min}+"),
             (min, max) => format!("{min}–{max}"),
         }
@@ -216,11 +216,12 @@ mod tests {
 
     #[test]
     fn a_band_reads_as_numbers() {
-        let ranges: Vec<String> = LEVELS.iter().map(Level::range).collect();
+        let ranges: Vec<String> = LEVELS.iter().map(|level| level.range(Lang::En)).collect();
         assert_eq!(
             ranges,
-            ["< 1000", "1000–1399", "1400–1799", "1800–2199", "2200+"]
+            ["under 1000", "1000–1399", "1400–1799", "1800–2199", "2200+"]
         );
+        assert_eq!(LEVELS[0].range(Lang::Es), "menos de 1000");
     }
 
     #[test]

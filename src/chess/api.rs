@@ -36,7 +36,8 @@ struct ErrorBody {
 /// What a worksheet asks the API for.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Filter {
-    pub themes: Vec<String>,
+    /// A Lichess theme name; none means any theme.
+    pub theme: Option<&'static str>,
     pub rating_min: u32,
     pub rating_max: u32,
 }
@@ -80,9 +81,8 @@ impl ChessApi {
             ("ratingMax", filter.rating_max.to_string()),
             ("count", count.to_string()),
         ];
-        if !filter.themes.is_empty() {
-            query.push(("themes", filter.themes.join(",")));
-            query.push(("themesMode", "any".to_string()));
+        if let Some(theme) = filter.theme {
+            query.push(("themes", theme.to_string()));
         }
         let batch: Batch = self.get("/v1/puzzles/random", &query).await?;
         Ok(batch.puzzles)

@@ -101,8 +101,8 @@ pub fn landing(lang: Lang) -> String {
     let levels: String = LEVELS
         .iter()
         .map(|level| {
-            let label = format!("{} · {}", level.label.get(lang), level.range());
-            option(level.id, &label, level.id == DEFAULT_LEVEL)
+            let label = format!("{} · {}", level.label.get(lang), level.range(lang));
+            option(level.id, &escape(&label), level.id == DEFAULT_LEVEL)
         })
         .collect();
     let themes: String = THEMES
@@ -166,7 +166,7 @@ pub fn error(message: &str, lang: Lang) -> String {
 pub fn llms_txt(base_url: &str) -> String {
     let levels: String = LEVELS
         .iter()
-        .map(|level| format!("- `{}`: rating {}.\n", level.id, level.range()))
+        .map(|level| format!("- `{}`: rating {}.\n", level.id, level.range(Lang::En)))
         .collect();
     let themes: Vec<String> = THEMES
         .iter()

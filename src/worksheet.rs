@@ -59,10 +59,7 @@ pub async fn create(api: &ChessApi, request: Request) -> Result<Created, Workshe
     let theme = find_theme(request.theme.as_deref())?;
 
     let filter = Filter {
-        themes: theme
-            .map(|theme| theme.id.to_string())
-            .into_iter()
-            .collect(),
+        theme: theme.map(|theme| theme.id),
         rating_min: level.rating_min,
         rating_max: level.rating_max,
     };
@@ -154,7 +151,7 @@ pub fn subtitle(level: &Level, theme: Option<&Theme>, lang: Lang) -> String {
         "{}: {} ({})",
         text.difficulty,
         level.label.get(lang),
-        level.range()
+        level.range(lang)
     );
     if let Some(theme) = theme {
         subtitle.push_str(&format!(" · {}: {}", text.theme, theme.label.get(lang)));

@@ -19,10 +19,10 @@ page, each with:
 - what to find, the way chess sites put it: *Mate in 2*;
 - the position's FEN, to set it up in any chess program.
 
-Solutions go on a page of their own after each page of puzzles (print
-double-sided and they land on the back), or are left out for a student working
-alone. Spanish sheets use Spanish piece letters (R, D, T, A,
-C).
+Solutions go on a page of their own after each page of puzzles, so printing
+double-sided puts them on the back, or are left out for a student working
+alone. Each entry repeats its goal, so the page reads without the front.
+Spanish sheets use Spanish piece letters (R, D, T, A, C).
 
 ## Difficulty and theme
 
@@ -44,8 +44,8 @@ each player's own rating.
 | `advanced` | 1800–2199 |
 | `expert` | 2200+ |
 
-The sheet prints the band next to the level, so the number is always in
-sight.
+The form and the sheet print the band next to the level, so the number is
+always in sight. Rating and theme are the only criteria, as on Lichess.
 
 ## Links, not files
 
@@ -55,7 +55,7 @@ solutions. Nothing is stored.
 
 ```
 /sheet/new?level=beginner&theme=fork&count=12&lang=es&title=3º básico
-/sheet/new?level=advanced&answers=page
+/sheet/new?level=advanced&answers=none
 /sheet?ids=00008,00014
 ```
 
@@ -72,7 +72,8 @@ describes the rest.
 Puzzles come from [chess-puzzle-api](https://github.com/mauricioulloa/chess-puzzle-api),
 which serves the Lichess puzzle database. This service owns the page: it
 draws the boards as SVG, lays out the sheet for A4 and Letter alike, and
-leaves PDF to the browser's own print dialog.
+leaves PDF to the browser's own print dialog. A request to the API that takes
+longer than 20 seconds becomes an error page rather than a hung browser.
 
 The sheet itself does not know it is chess. A puzzle type supplies a diagram,
 a prompt, a detail line and a solution; the layout and the solutions work the
@@ -86,8 +87,8 @@ cargo run -- serve
 
 It reads `CHESS_API_URL` (defaults to the public API), `CHESS_API_KEY`,
 `PUBLIC_URL`, `BIND_ADDR` and `MCP_ALLOWED_HOSTS`. Without a key every sheet
-shares the API's anonymous rate limit, and a sheet costs two requests per
-puzzle.
+shares the API's anonymous rate limit, and a sheet costs one request to pick
+the puzzles plus two per puzzle to print them.
 
 ```bash
 cargo test && cargo clippy --all-targets

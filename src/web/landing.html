@@ -4,40 +4,70 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>__TITLE__</title>
-<meta name="description" content="__TAGLINE__">
+<meta name="description" content="__LEDE__">
+<meta name="author" content="Mauri Ulloa">
 <style>
-  :root { --ink: #1a1a1a; --muted: #5c5c5c; --line: #d6d6d6; --accent: #1f5f3f; --bg: #fafaf7; }
+  /* Same tokens as chess-puzzle-api's page, so the two read as one family. */
+  :root {
+    color-scheme: light dark;
+    --bg: #fbfaf8; --fg: #1a1a1a; --muted: #5c5c5c; --line: #e3e0da;
+    --panel: #ffffff; --accent: #3c6e47;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16171a; --fg: #e8e6e3; --muted: #9a9894; --line: #2c2e33;
+      --panel: #1c1e22; --accent: #8fc79a;
+    }
+  }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink);
-         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 48px; }
-  h1 { font-size: 2rem; margin: 0 0 .25rem; }
-  .tagline { color: var(--muted); margin: 0 0 1.5rem; }
-  .lang { float: right; font-size: .9rem; }
+  body {
+    background: var(--bg); color: var(--fg); margin: 0;
+    font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 52rem; margin: 0 auto; padding: 2.5rem 1rem 4rem; }
   a { color: var(--accent); }
+  h1 { font-size: 1.7rem; margin: 0 0 .3rem; letter-spacing: -.02em; }
+  .lede { color: var(--muted); margin: 0 0 1.8rem; }
+  .lang { float: right; font-size: .9rem; }
+
   fieldset { border: 0; padding: 0; margin: 0 0 1.5rem; }
-  legend { font-weight: 700; margin-bottom: .5rem; }
-  .presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
-  .preset { display: block; border: 1px solid var(--line); border-radius: 8px; padding: 12px;
-            background: #fff; cursor: pointer; }
-  .preset:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
-  .preset input { margin: 0 6px 0 0; }
-  .preset strong { font-size: 1.05rem; }
-  .preset small { display: block; color: var(--muted); margin-top: 4px; }
-  .options { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
-  label.field { display: flex; flex-direction: column; gap: 4px; font-size: .95rem; }
-  select, input[type=text] { font: inherit; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
-  button { font: inherit; font-weight: 700; padding: 12px 24px; border: 0; border-radius: 8px;
-           background: var(--accent); color: #fff; cursor: pointer; margin-top: 8px; }
+  legend, .field label {
+    font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
+  }
+  legend { margin-bottom: .5rem; }
+
+  .presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: .6rem; }
+  .preset {
+    display: block; border: 1px solid var(--line); border-radius: 8px; padding: .75rem .85rem;
+    background: var(--panel); cursor: pointer;
+  }
+  .preset:hover { border-color: var(--accent); }
+  .preset:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .preset input { margin: 0 .4rem 0 0; accent-color: var(--accent); }
+  .preset small { display: block; color: var(--muted); margin-top: .2rem; line-height: 1.4; }
+
+  .controls { display: flex; gap: .75rem; flex-wrap: wrap; }
+  .field { display: flex; flex-direction: column; gap: .3rem; flex: 1 1 11rem; }
+  select, input[type=text], button {
+    font: inherit; padding: .55rem .7rem; border-radius: 7px;
+    border: 1px solid var(--line); background: var(--panel); color: var(--fg);
+  }
+  button { cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+  @media (prefers-color-scheme: dark) { button.primary { color: #12140f; } }
+
   .notes { margin-top: 2.5rem; color: var(--muted); font-size: .9rem; }
-  .notes p { margin: .4rem 0; }
+  footer { margin-top: 2.5rem; padding-top: 1.2rem; border-top: 1px solid var(--line);
+           color: var(--muted); font-size: .85rem; }
+  footer p { margin: .4rem 0; }
+  footer .by { color: var(--fg); }
 </style>
 </head>
 <body>
 <main>
   <a class="lang" href="__OTHER_LANG_URL__">__OTHER_LANG_LABEL__</a>
   <h1>__TITLE__</h1>
-  <p class="tagline">__TAGLINE__</p>
+  <p class="lede">__LEDE__</p>
 
   <form action="/sheet/new" method="get">
     <input type="hidden" name="lang" value="__LANG__">
@@ -48,34 +78,42 @@ __PRESETS__
       </div>
     </fieldset>
 
-    <fieldset class="options">
-      <label class="field">__COUNT__
-        <select name="count">
+    <fieldset class="controls">
+      <div class="field">
+        <label for="count">__COUNT__</label>
+        <select id="count" name="count">
           <option value="6">6</option>
           <option value="12">12</option>
         </select>
-      </label>
-      <label class="field">__ANSWERS__
-        <select name="answers">
+      </div>
+      <div class="field">
+        <label for="answers">__ANSWERS__</label>
+        <select id="answers" name="answers">
           <option value="page">__ANSWERS_PAGE__</option>
           <option value="footer">__ANSWERS_FOOTER__</option>
           <option value="none">__ANSWERS_NONE__</option>
         </select>
-      </label>
-      <label class="field">__SHEET_TITLE__
-        <input type="text" name="title" maxlength="80" placeholder="__SHEET_TITLE_HINT__">
-      </label>
+      </div>
+      <div class="field">
+        <label for="title">__SHEET_TITLE__</label>
+        <input id="title" type="text" name="title" maxlength="80" placeholder="__SHEET_TITLE_HINT__">
+      </div>
     </fieldset>
 
-    <button type="submit">__CREATE__</button>
+    <button class="primary" type="submit">__CREATE__</button>
   </form>
 
   <div class="notes">
     <p>__NOTE_LICENCE__</p>
     <p>__NOTE_AGENTS__</p>
     <p>__NOTE_FEEDBACK__</p>
-    <p>__NOTE_CREDITS__</p>
   </div>
+
+  <footer>
+    <p class="by">__FOOTER_BY__</p>
+    <p>__FOOTER_DATA__</p>
+    <p>__FOOTER_PIECES__</p>
+  </footer>
 </main>
 </body>
 </html>

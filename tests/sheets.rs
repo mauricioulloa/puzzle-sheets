@@ -9,7 +9,7 @@ use axum::routing::get;
 use axum::{Json, Router};
 use http_body_util::BodyExt;
 use puzzle_sheets::chess::api::ChessApi;
-use puzzle_sheets::web::{self, AppState};
+use puzzle_sheets::web::routes::{self, AppState};
 use serde_json::{Value, json};
 use std::sync::{Arc, Mutex};
 use tower::ServiceExt;
@@ -106,7 +106,7 @@ fn app_against(chess_api_url: &str) -> Router {
         api: ChessApi::new(chess_api_url, None),
         public_url: PUBLIC_URL.to_string(),
     });
-    web::router(state, &[])
+    routes::router(state, &[])
 }
 
 async fn get_page(app: &Router, uri: &str) -> (StatusCode, String, Option<String>) {

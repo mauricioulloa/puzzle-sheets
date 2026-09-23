@@ -1,16 +1,11 @@
 use crate::chess::api::ChessApi;
-use crate::web::{self, AppState};
+use crate::web::routes::{self, AppState};
 use anyhow::{Context, Result};
-use clap::Parser;
+use clap::Args;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 
-#[derive(Parser, Debug)]
-#[command(
-    name = "puzzle-sheets",
-    version,
-    about = "Printable puzzle worksheets for students and educators"
-)]
+#[derive(Args, Debug)]
 pub struct ServeArgs {
     /// Address to listen on
     #[arg(long, env = "BIND_ADDR", default_value = "127.0.0.1:8080")]
@@ -51,7 +46,7 @@ pub async fn run(args: ServeArgs) -> Result<()> {
         api: ChessApi::new(&args.chess_api_url, args.chess_api_key),
         public_url: args.public_url.trim_end_matches('/').to_string(),
     });
-    let app = web::router(state, &args.mcp_allowed_hosts);
+    let app = routes::router(state, &args.mcp_allowed_hosts);
 
     let listener = TcpListener::bind(&args.bind)
         .await

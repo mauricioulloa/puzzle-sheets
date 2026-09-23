@@ -50,7 +50,7 @@ answer key. Nothing is stored.
 /sheet?ids=00008,00014
 ```
 
-## For agents
+## For language models
 
 `POST /mcp` is a Model Context Protocol server with `list_presets` and
 `create_worksheet`, which returns a printable link. An assistant helping a
@@ -69,10 +69,10 @@ The sheet itself does not know it is chess. A puzzle type supplies a diagram,
 a prompt, a detail line and a solution; the layout, answer key and presets
 work the same for whatever comes next.
 
-## Running it
+## Self-hosting
 
 ```bash
-cargo run -- --bind 127.0.0.1:8080
+cargo run -- serve
 ```
 
 It reads `CHESS_API_URL` (defaults to the public API), `CHESS_API_KEY`,
@@ -96,9 +96,12 @@ What is already planned is in [BACKLOG.md](BACKLOG.md).
 
 ## Attribution
 
-Puzzles from the [Lichess open database](https://database.lichess.org/#puzzles),
-public domain under CC0. This project is not affiliated with or endorsed by
-Lichess. Chess pieces by
+Puzzle data from the [Lichess open database](https://database.lichess.org/),
+public domain under CC0. Lichess is free and ad-free —
+[consider supporting them](https://lichess.org/patron). This project is not
+affiliated with or endorsed by Lichess.
+
+Chess pieces by
 [Colin M.L. Burnett](https://en.wikipedia.org/wiki/User:Cburnett),
 [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
 

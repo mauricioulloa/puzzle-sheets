@@ -25,3 +25,4 @@ COPY --from=builder /build/target/release/puzzle-sheets /usr/local/bin/puzzle-sh
 ENV BIND_ADDR=0.0.0.0:8080
 EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/puzzle-sheets"]
+CMD ["serve"]

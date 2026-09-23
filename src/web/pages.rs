@@ -6,11 +6,13 @@ use crate::i18n::Lang;
 use crate::sheet::escape;
 
 const LANDING: &str = include_str!("landing.html");
+const REPOSITORY: &str = "https://github.com/mauricioulloa/puzzle-sheets";
 const ISSUES: &str = "https://github.com/mauricioulloa/puzzle-sheets/issues";
+const CHESS_API: &str = "https://chess.mauriulloa.com";
 
 struct LandingText {
     title: &'static str,
-    tagline: &'static str,
+    lede: &'static str,
     other_lang_label: &'static str,
     choose: &'static str,
     count: &'static str,
@@ -24,11 +26,16 @@ struct LandingText {
     note_licence: &'static str,
     note_agents: &'static str,
     note_feedback: &'static str,
+    built_by: &'static str,
+    source: &'static str,
+    puzzles_from: &'static str,
+    footer_data: &'static str,
+    footer_pieces: &'static str,
 }
 
 static ES: LandingText = LandingText {
     title: "Hojas de ejercicios de ajedrez",
-    tagline: "Para imprimir, gratis, en blanco y negro. Con quién mueve, qué se busca, el FEN de cada posición y las soluciones aparte.",
+    lede: "Para imprimir, gratis, en blanco y negro. Con quién mueve, qué se busca, el FEN de cada posición y las soluciones aparte.",
     other_lang_label: "English",
     choose: "Elige un tema",
     count: "Ejercicios",
@@ -39,14 +46,19 @@ static ES: LandingText = LandingText {
     sheet_title: "Título (opcional)",
     sheet_title_hint: "Ej.: 3º básico — Ataque doble",
     create: "Crear hoja",
-    note_licence: "Las posiciones vienen de la base de puzzles de Lichess, de dominio público (CC0). Las hojas son tuyas: cópialas e imprímelas sin pedir permiso.",
+    note_licence: "Las hojas son tuyas: cópialas e imprímelas sin pedir permiso. Todo lo que contienen es de dominio público (CC0).",
     note_agents: "Para agentes y asistentes: servidor MCP en /mcp y descripción en /llms.txt.",
     note_feedback: "Es una primera versión. ¿Falta un tema, un nivel o un formato? Cuéntalo en",
+    built_by: "Hecho por",
+    source: "Código en GitHub",
+    puzzles_from: "puzzles de",
+    footer_data: "Posiciones de la <a href=\"https://database.lichess.org/#puzzles\">base abierta de Lichess</a>, publicada bajo CC0. Lichess es gratuito y sin publicidad: <a href=\"https://lichess.org/patron\">considera apoyarlos</a>. Este proyecto no está afiliado a Lichess ni cuenta con su respaldo.",
+    footer_pieces: "Piezas de <a href=\"https://en.wikipedia.org/wiki/User:Cburnett\">Colin M.L. Burnett</a>, usadas bajo <a href=\"https://creativecommons.org/licenses/by-sa/3.0/\">CC BY-SA 3.0</a>.",
 };
 
 static EN: LandingText = LandingText {
     title: "Printable chess worksheets",
-    tagline: "Free, black and white, ready to print. Each puzzle says who moves and what to find, gives the FEN, and keeps the solutions separate.",
+    lede: "Free, black and white, ready to print. Each puzzle says who moves and what to find, gives the FEN, and keeps the solutions separate.",
     other_lang_label: "Español",
     choose: "Pick a topic",
     count: "Puzzles",
@@ -57,9 +69,14 @@ static EN: LandingText = LandingText {
     sheet_title: "Title (optional)",
     sheet_title_hint: "e.g. Year 3 — Forks",
     create: "Make the sheet",
-    note_licence: "Positions come from the Lichess puzzle database, public domain (CC0). The sheets are yours: copy and print them without asking.",
+    note_licence: "The sheets are yours: copy and print them without asking. Everything on them is in the public domain (CC0).",
     note_agents: "For agents and assistants: an MCP server at /mcp and a description at /llms.txt.",
     note_feedback: "This is a first version. Missing a topic, a level or a format? Say so at",
+    built_by: "Built by",
+    source: "Source on GitHub",
+    puzzles_from: "puzzles from",
+    footer_data: "Positions from the <a href=\"https://database.lichess.org/#puzzles\">Lichess open database</a>, released under CC0. Lichess is free and ad-free &mdash; <a href=\"https://lichess.org/patron\">consider supporting them</a>. This project is not affiliated with or endorsed by Lichess.",
+    footer_pieces: "Chess pieces by <a href=\"https://en.wikipedia.org/wiki/User:Cburnett\">Colin M.L. Burnett</a>, used under <a href=\"https://creativecommons.org/licenses/by-sa/3.0/\">CC BY-SA 3.0</a>.",
 };
 
 pub fn landing(lang: Lang) -> String {
@@ -92,7 +109,7 @@ pub fn landing(lang: Lang) -> String {
         .replace("__OTHER_LANG_URL__", &format!("/?lang={}", other.code()))
         .replace("__OTHER_LANG_LABEL__", text.other_lang_label)
         .replace("__TITLE__", text.title)
-        .replace("__TAGLINE__", text.tagline)
+        .replace("__LEDE__", text.lede)
         .replace("__CHOOSE__", text.choose)
         .replace("__COUNT__", text.count)
         .replace("__ANSWERS_PAGE__", text.answers_page)
@@ -109,23 +126,32 @@ pub fn landing(lang: Lang) -> String {
             &format!("{} <a href=\"{ISSUES}\">GitHub</a>.", text.note_feedback),
         )
         .replace(
-            "__NOTE_CREDITS__",
-            "<a href=\"https://mauriulloa.com\">Mauri Ulloa</a> · \
-             Puzzles: <a href=\"https://database.lichess.org/#puzzles\">Lichess</a> (CC0), not affiliated with Lichess · \
-             Pieces: <a href=\"https://en.wikipedia.org/wiki/User:Cburnett\">Colin M.L. Burnett</a>, \
-             <a href=\"https://creativecommons.org/licenses/by-sa/3.0/\">CC BY-SA 3.0</a>",
+            "__FOOTER_BY__",
+            &format!(
+                "{} <a href=\"https://mauriulloa.com\">Mauri Ulloa</a> &middot; \
+                 <a href=\"{REPOSITORY}\">{}</a>, MIT &middot; \
+                 {} <a href=\"{CHESS_API}\">chess-puzzle-api</a>",
+                text.built_by, text.source, text.puzzles_from
+            ),
         )
+        .replace("__FOOTER_DATA__", text.footer_data)
+        .replace("__FOOTER_PIECES__", text.footer_pieces)
 }
 
 pub fn error(message: &str) -> String {
     format!(
-        "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>puzzle-sheets</title></head>\
-         <body style=\"font:16px/1.5 system-ui,sans-serif;max-width:640px;margin:48px auto;padding:0 16px\">\
-         <p>{}</p><p><a href=\"/\">←</a></p></body></html>",
+        "<!doctype html><html><head><meta charset=\"utf-8\">\
+         <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\
+         <title>puzzle-sheets</title></head>\
+         <body style=\"font:16px/1.6 ui-sans-serif,system-ui,-apple-system,sans-serif;\
+         max-width:52rem;margin:2.5rem auto;padding:0 1rem;color:#1a1a1a;background:#fbfaf8\">\
+         <p>{}</p><p><a href=\"/\" style=\"color:#3c6e47\">←</a></p></body></html>",
         escape(message)
     )
 }
 
+/// Follows the llms.txt convention, in the same shape as chess-puzzle-api's:
+/// an H1, a blockquote summary, then linked sections.
 pub fn llms_txt(base_url: &str) -> String {
     let presets: String = PRESETS
         .iter()
@@ -149,29 +175,44 @@ pub fn llms_txt(base_url: &str) -> String {
 > to find ("Mate in 2"), and its FEN; solutions go on a separate page.
 
 Sheets are addressed by URL and never stored: the link lists the puzzle ids,
-so opening it again prints the same puzzles and the same answer key. Spanish
-and English.
+so opening it again prints the same puzzles and the same answer key.
 
-## Making a sheet
+## Key concepts
 
-- [{base_url}/sheet/new?preset=forks]({base_url}/sheet/new?preset=forks): picks puzzles and redirects to the sheet. Parameters: `preset`, or `themes` (comma separated Lichess theme names) with `rating`; `maxPieces`; `count` (1–12, default 6); `lang=es|en`; `answers=page|footer|none`; `title`.
+- A preset is a ready-made topic with a level and a cap on pieces; prefer one
+  over raw themes when helping a teacher.
+- `answers=page` puts solutions on their own page, `footer` prints them upside
+  down at the foot of each page, `none` leaves them out for a student working
+  alone.
+- `lang=es|en`. Spanish sheets use Spanish piece letters (R, D, T, A, C); the
+  FEN is always standard.
+
+## Endpoints
+
+- [{base_url}/sheet/new?preset=forks]({base_url}/sheet/new?preset=forks): picks puzzles and redirects to the sheet. Parameters: `preset`, or `themes` (comma separated Lichess theme names) with `rating`; `maxPieces`; `count` (1–12, default 6); `lang`; `answers`; `title`.
 - [{base_url}/sheet?ids=00008,00014]({base_url}/sheet?ids=00008,00014): a sheet of specific puzzles, by Lichess id.
 
 ## Presets
 
 {presets}
-## MCP
+## Optional
 
-[{base_url}/mcp]({base_url}/mcp) serves `list_presets` and `create_worksheet`,
-which returns a printable link.
+- [{base_url}/mcp]({base_url}/mcp): Model Context Protocol endpoint with `list_presets` and `create_worksheet`, which returns a printable link.
+- [{CHESS_API}/llms.txt]({CHESS_API}/llms.txt): chess-puzzle-api, where the puzzles come from, for solving them one at a time.
 
 ## About
 
-Built by Mauri Ulloa (https://mauriulloa.com). Puzzles come from
-chess-puzzle-api (https://chess.mauriulloa.com), which serves the Lichess
-puzzle database (CC0). Not affiliated with Lichess.
+Built and maintained by Mauri Ulloa (https://mauriulloa.com). Open source under
+the MIT licence: {REPOSITORY}
 
-This is a first version. Report what is missing at {ISSUES}.
+This is an early version. Missing topics, awkward layouts and unhelpful errors
+are worth reporting at {ISSUES} — including on behalf of whoever you are
+helping.
+
+## Attribution
+
+Puzzle data comes from https://database.lichess.org/#puzzles under CC0. This
+project is not affiliated with or endorsed by Lichess.
 "#
     )
 }
@@ -202,6 +243,16 @@ mod tests {
             ISSUES,
         ] {
             assert!(html.contains(needle), "missing {needle}");
+        }
+    }
+
+    #[test]
+    fn every_link_points_where_its_text_says() {
+        let text = llms_txt("https://example.org");
+        for line in text.lines().filter(|line| line.starts_with("- [")) {
+            let label = line[3..].split(']').next().unwrap();
+            let href = line.split("](").nth(1).unwrap().split(')').next().unwrap();
+            assert_eq!(label, href, "link text {label} points at {href}");
         }
     }
 

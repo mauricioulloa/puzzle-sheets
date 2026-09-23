@@ -9,6 +9,7 @@ use crate::i18n::Lang;
 
 pub struct Preset {
     pub id: &'static str,
+    /// Spanish, then English.
     title: [&'static str; 2],
     description: [&'static str; 2],
     /// Lichess theme names; a puzzle needs any one of them.
@@ -20,11 +21,18 @@ pub struct Preset {
 
 impl Preset {
     pub fn title(&self, lang: Lang) -> &'static str {
-        self.title[lang as usize]
+        pick(self.title, lang)
     }
 
     pub fn description(&self, lang: Lang) -> &'static str {
-        self.description[lang as usize]
+        pick(self.description, lang)
+    }
+}
+
+fn pick([es, en]: [&'static str; 2], lang: Lang) -> &'static str {
+    match lang {
+        Lang::Es => es,
+        Lang::En => en,
     }
 }
 

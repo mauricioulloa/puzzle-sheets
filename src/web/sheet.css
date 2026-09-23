@@ -44,8 +44,8 @@ h1 { font-size: 17pt; margin: 0; }
 .subtitle { margin: 1mm 0 0; font-size: 11pt; }
 
 /* Three fixed rows, with each diagram taking whatever height its row has
-   left after the text. Solutions at the foot shrink the boards a little
-   instead of pushing the page onto a second sheet. */
+   left after the text, so a long prompt shrinks the boards a little instead
+   of pushing the page onto a second sheet. */
 .grid {
   display: grid; grid-template-columns: 1fr 1fr;
   grid-template-rows: repeat(3, minmax(0, 1fr));
@@ -64,12 +64,6 @@ h1 { font-size: 17pt; margin: 0; }
 
 .solutions { margin: 0; padding: 0; list-style: none; }
 .solutions li { margin-bottom: 1mm; }
-
-.upside-down {
-  transform: rotate(180deg);
-  font-size: 8pt; border-top: 1px dashed #000; padding-top: 2mm; margin-top: 2mm;
-}
-.upside-down .solutions { columns: 2; column-gap: 8mm; }
 
 .answers .solutions { font-size: 11pt; }
 .answers .solutions li { margin-bottom: 3mm; }

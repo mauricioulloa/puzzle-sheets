@@ -19,7 +19,6 @@ struct LandingText {
     any_theme: &'static str,
     count: &'static str,
     answers: &'static str,
-    answers_footer: &'static str,
     answers_page: &'static str,
     answers_none: &'static str,
     sheet_title: &'static str,
@@ -37,14 +36,13 @@ struct LandingText {
 
 static ES: LandingText = LandingText {
     title: "Hojas de ejercicios de ajedrez",
-    lede: "Para imprimir, gratis y con poca tinta. Cada ejercicio indica quién mueve, qué se busca y su FEN; las soluciones van al pie, al revés.",
+    lede: "Para imprimir, gratis y con poca tinta. Cada ejercicio indica quién mueve, qué se busca y su FEN; las soluciones van en otra hoja.",
     other_lang_label: "English",
     difficulty: "Dificultad",
     theme: "Tema",
     any_theme: "Cualquier tema",
     count: "Ejercicios",
     answers: "Soluciones",
-    answers_footer: "Al pie de la hoja, al revés",
     answers_page: "En otra hoja (para imprimir atrás)",
     answers_none: "Sin soluciones",
     sheet_title: "Título (opcional)",
@@ -62,14 +60,13 @@ static ES: LandingText = LandingText {
 
 static EN: LandingText = LandingText {
     title: "Printable chess worksheets",
-    lede: "Free to print, and light on ink. Each puzzle shows who moves, what to find and its FEN; solutions sit upside down at the foot of the page.",
+    lede: "Free to print, and light on ink. Each puzzle shows who moves, what to find and its FEN; solutions go on a page of their own.",
     other_lang_label: "Español",
     difficulty: "Difficulty",
     theme: "Theme",
     any_theme: "Any theme",
     count: "Puzzles",
     answers: "Solutions",
-    answers_footer: "Upside down at the foot of the page",
     answers_page: "On their own page (to print on the back)",
     answers_none: "No solutions",
     sheet_title: "Title (optional)",
@@ -122,7 +119,6 @@ pub fn landing(lang: Lang) -> String {
         .replace("__ANY_THEME__", text.any_theme)
         .replace("__THEME__", text.theme)
         .replace("__COUNT__", text.count)
-        .replace("__ANSWERS_FOOTER__", text.answers_footer)
         .replace("__ANSWERS_PAGE__", text.answers_page)
         .replace("__ANSWERS_NONE__", text.answers_none)
         .replace("__ANSWERS__", text.answers)
@@ -189,7 +185,7 @@ pub fn llms_txt(base_url: &str) -> String {
 
 > Printable chess worksheets for students and educators, free and in the
 > public domain (CC0). Each puzzle is a diagram with who moves, what to find
-> ("Mate in 2") and its FEN; solutions sit upside down at the foot of the page.
+> ("Mate in 2") and its FEN; solutions go on a page of their own.
 
 Sheets are addressed by URL and never stored: the link lists the puzzle ids,
 so opening it again prints the same puzzles and the same solutions.
@@ -199,10 +195,9 @@ so opening it again prints the same puzzles and the same solutions.
 - A sheet takes a difficulty and, optionally, a theme. The two easiest levels
   cap the pieces on the board, because a low rating alone can still be a
   crowded middlegame.
-- `answers=footer` (default) prints solutions upside down at the foot of each
-  page; `page` puts them on a page of their own after each page of puzzles,
-  so double-sided printing puts them on the back; `none` leaves them out for
-  a student working alone.
+- `answers=page` (default) puts solutions on a page of their own after each
+  page of puzzles, so double-sided printing puts them on the back; `none`
+  leaves them out for a student working alone.
 - `lang=es|en`. Spanish sheets use Spanish piece letters (R, D, T, A, C); the
   FEN is always standard.
 

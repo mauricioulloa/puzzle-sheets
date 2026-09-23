@@ -52,10 +52,9 @@ pub struct CreateWorksheetArgs {
     pub count: Option<usize>,
     /// `es` or `en`. Defaults to `es`.
     pub lang: Option<String>,
-    /// `footer` (default) prints the solutions upside down at the foot of
-    /// each page; `page` puts them on a page of their own after each page of
-    /// puzzles, to print on the back; `none` leaves them out, for a student
-    /// working alone.
+    /// `page` (default) puts the solutions on a page of their own after each
+    /// page of puzzles, to print on the back; `none` leaves them out, for a
+    /// student working alone.
     pub answers: Option<String>,
     /// Heading printed on the sheet, e.g. a class name.
     pub title: Option<String>,
@@ -137,8 +136,8 @@ impl SheetTools {
     #[tool(
         name = "create_worksheet",
         description = "Make a printable chess worksheet and return its link. Each puzzle shows \
-                       who moves, what to find (e.g. 'Mate in 2') and its FEN; solutions sit \
-                       upside down at the foot of the page unless asked otherwise. Use this \
+                       who moves, what to find (e.g. 'Mate in 2') and its FEN; solutions go on \
+                       a page of their own unless asked otherwise. Use this \
                        when a teacher, parent or student wants puzzles on paper."
     )]
     async fn create_worksheet(
@@ -147,8 +146,9 @@ impl SheetTools {
     ) -> Result<Json<Worksheet>, ErrorData> {
         let answers = match args.answers.as_deref() {
             None => Answers::default(),
-            Some(value) => Answers::parse(value)
-                .ok_or_else(|| invalid("answers must be footer, page or none"))?,
+            Some(value) => {
+                Answers::parse(value).ok_or_else(|| invalid("answers must be page or none"))?
+            }
         };
         let request = worksheet::Request {
             level: args.level,

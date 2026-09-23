@@ -24,9 +24,7 @@ fn parse_answers(raw: Option<&str>) -> Result<Answers, WorksheetError> {
     match raw {
         None => Ok(Answers::default()),
         Some(value) => Answers::parse(value).ok_or_else(|| {
-            WorksheetError::Invalid(format!(
-                "`answers` must be footer, page or none; got `{value}`."
-            ))
+            WorksheetError::Invalid(format!("`answers` must be page or none; got `{value}`."))
         }),
     }
 }

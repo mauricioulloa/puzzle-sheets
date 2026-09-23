@@ -210,14 +210,14 @@ async fn each_puzzle_says_who_moves_what_to_find_and_its_fen() {
 }
 
 #[tokio::test]
-async fn solutions_sit_upside_down_unless_left_out() {
+async fn solutions_go_on_their_own_page_unless_left_out() {
     let (app, _) = app().await;
     let (_, html, _) = get_page(&app, "/sheet?ids=00008,000Zo&lang=en").await;
-
-    let footer = html
-        .find("class=\"upside-down\"")
-        .expect("footer solutions");
-    assert!(html.find("1. Rxe7 Qb1+ 2. Nc1").expect("solution") > footer);
+    let answers = html
+        .find("class=\"page answers\"")
+        .expect("a solutions page by default");
+    assert!(html.find("3r2k1/5ppp").unwrap() < answers, "puzzles first");
+    assert!(html.find("Win decisively: 1. Rxe7").unwrap() > answers);
 
     let (_, student, _) = get_page(&app, "/sheet?ids=00008,000Zo&lang=en&answers=none").await;
     assert!(
@@ -225,16 +225,8 @@ async fn solutions_sit_upside_down_unless_left_out() {
         "a student sheet carries no answers"
     );
 
-    let (_, backed, _) = get_page(&app, "/sheet?ids=00008,000Zo&lang=en&answers=page").await;
-    let answers = backed
-        .find("class=\"page answers\"")
-        .expect("a solutions page");
-    assert!(
-        backed.find("3r2k1/5ppp").unwrap() < answers,
-        "puzzles first"
-    );
-    assert!(backed.find("Win decisively: 1. Rxe7").unwrap() > answers);
-    assert!(!backed.contains("class=\"upside-down\""));
+    let (status, _, _) = get_page(&app, "/sheet?ids=00008&answers=footer").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "footer solutions are gone");
 }
 
 #[tokio::test]

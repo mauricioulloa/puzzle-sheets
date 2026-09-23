@@ -36,10 +36,7 @@ body {
 
 /* A book's typography: serif headings, centred, and nothing else on top. */
 header { text-align: center; margin-bottom: 4mm; }
-h1, h2, .subtitle, .answers .solutions { font-size: 11pt; }
-.answers .solutions li { margin-bottom: 3mm; }
-
-.page-number { font-family: "Iowan Old Style", Palatino, Georgia, serif; }
+h1, h2, .subtitle { font-family: "Iowan Old Style", Palatino, Georgia, serif; }
 h1 { font-size: 17pt; margin: 0; }
 .subtitle { margin: 1mm 0 0; font-size: 11pt; }
 
@@ -62,14 +59,10 @@ h1 { font-size: 17pt; margin: 0; }
   font: 5pt/1.2 ui-monospace, Menlo, Consolas, monospace; color: #333;
 }
 
-.solutions { margin: 0; padding: 0; list-style: none; }
-.solutions li { margin-bottom: 1mm; }
+.solutions { margin: 0; padding: 0; list-style: none; font-size: 11pt; }
+.solutions li { margin-bottom: 3mm; }
 
-.answers .solutions { font-size: 11pt; }
-.answers .solutions li { margin-bottom: 3mm; }
-
-.page-number { margin: 2mm 0 0; text-align: center; font-size: 10pt; }
-.credit { margin: .5mm 0 0; font-size: 6.5pt; text-align: center; color: #333; }
+.credit { margin: 2mm 0 0; font-size: 6.5pt; text-align: center; color: #333; }
 
 @media print {
   body { background: none; }

@@ -74,7 +74,6 @@ pub fn render(sheet: &Sheet) -> String {
         .map(|subtitle| format!("<p class=\"subtitle\">{}</p>", escape(subtitle)))
         .unwrap_or_default();
     let pages: Vec<&[Item]> = sheet.items.chunks(PER_PAGE).collect();
-    let page_count = pages.len();
 
     let mut body = String::new();
     for (page_index, items) in pages.iter().enumerate() {
@@ -87,8 +86,7 @@ pub fn render(sheet: &Sheet) -> String {
         }
         body.push_str("</div>");
         body.push_str(&format!(
-            "<p class=\"page-number\">{} / {page_count}</p><p class=\"credit\">{} · puzzles.mauriulloa.com</p>",
-            page_index + 1,
+            "<p class=\"credit\">{} · puzzles.mauriulloa.com</p>",
             text.licence
         ));
         body.push_str("</section>");
@@ -222,10 +220,9 @@ mod tests {
     }
 
     #[test]
-    fn twelve_puzzles_make_two_numbered_pages() {
+    fn twelve_puzzles_make_two_pages() {
         let html = render(&sheet(12, Answers::None));
         assert_eq!(html.matches("<section class=\"page\">").count(), 2);
-        assert!(html.contains("2 / 2"));
         assert!(html.contains("<h2>12</h2>"));
     }
 

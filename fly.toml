@@ -1,0 +1,35 @@
+# Production deployment for puzzles.mauriulloa.com
+#
+# Stateless: every sheet is rebuilt from its URL, so there is no volume and
+# the machine can stop when idle and start on the next request.
+
+app = "puzzle-sheets"
+primary_region = "iad"
+
+[env]
+  BIND_ADDR = "0.0.0.0:8080"
+  CHESS_API_URL = "https://chess.mauriulloa.com"
+  PUBLIC_URL = "https://puzzles.mauriulloa.com"
+  RUST_LOG = "puzzle_sheets=info"
+  # Without this /mcp refuses every caller as a DNS-rebinding attempt.
+  MCP_ALLOWED_HOSTS = "puzzles.mauriulloa.com,puzzle-sheets.fly.dev"
+  # CHESS_API_KEY is a secret: fly secrets set CHESS_API_KEY=...
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_start_machines = true
+  auto_stop_machines = "stop"
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    grace_period = "5s"
+    interval = "30s"
+    method = "GET"
+    path = "/health"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+  cpus = 1

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="__LANG__">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<meta name="description" content="__TAGLINE__">
+<style>
+  :root { --ink: #1a1a1a; --muted: #5c5c5c; --line: #d6d6d6; --accent: #1f5f3f; --bg: #fafaf7; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 48px; }
+  h1 { font-size: 2rem; margin: 0 0 .25rem; }
+  .tagline { color: var(--muted); margin: 0 0 1.5rem; }
+  .lang { float: right; font-size: .9rem; }
+  a { color: var(--accent); }
+  fieldset { border: 0; padding: 0; margin: 0 0 1.5rem; }
+  legend { font-weight: 700; margin-bottom: .5rem; }
+  .presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .preset { display: block; border: 1px solid var(--line); border-radius: 8px; padding: 12px;
+            background: #fff; cursor: pointer; }
+  .preset:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+  .preset input { margin: 0 6px 0 0; }
+  .preset strong { font-size: 1.05rem; }
+  .preset small { display: block; color: var(--muted); margin-top: 4px; }
+  .options { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+  label.field { display: flex; flex-direction: column; gap: 4px; font-size: .95rem; }
+  select, input[type=text] { font: inherit; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+  button { font: inherit; font-weight: 700; padding: 12px 24px; border: 0; border-radius: 8px;
+           background: var(--accent); color: #fff; cursor: pointer; margin-top: 8px; }
+  .notes { margin-top: 2.5rem; color: var(--muted); font-size: .9rem; }
+  .notes p { margin: .4rem 0; }
+</style>
+</head>
+<body>
+<main>
+  <a class="lang" href="__OTHER_LANG_URL__">__OTHER_LANG_LABEL__</a>
+  <h1>__TITLE__</h1>
+  <p class="tagline">__TAGLINE__</p>
+
+  <form action="/sheet/new" method="get">
+    <input type="hidden" name="lang" value="__LANG__">
+    <fieldset>
+      <legend>__CHOOSE__</legend>
+      <div class="presets">
+__PRESETS__
+      </div>
+    </fieldset>
+
+    <fieldset class="options">
+      <label class="field">__COUNT__
+        <select name="count">
+          <option value="6">6</option>
+          <option value="12">12</option>
+        </select>
+      </label>
+      <label class="field">__ANSWERS__
+        <select name="answers">
+          <option value="page">__ANSWERS_PAGE__</option>
+          <option value="footer">__ANSWERS_FOOTER__</option>
+          <option value="none">__ANSWERS_NONE__</option>
+        </select>
+      </label>
+      <label class="field">__SHEET_TITLE__
+        <input type="text" name="title" maxlength="80" placeholder="__SHEET_TITLE_HINT__">
+      </label>
+    </fieldset>
+
+    <button type="submit">__CREATE__</button>
+  </form>
+
+  <div class="notes">
+    <p>__NOTE_LICENCE__</p>
+    <p>__NOTE_AGENTS__</p>
+    <p>__NOTE_FEEDBACK__</p>
+    <p>__NOTE_CREDITS__</p>
+  </div>
+</main>
+</body>
+</html>

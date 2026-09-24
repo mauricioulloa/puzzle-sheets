@@ -6,9 +6,44 @@ mod common;
 use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode, header};
-use common::{PUBLIC_URL, app, app_against};
+use common::{BUSY_ID, BUSY_RETRY_AFTER, PUBLIC_URL, app, app_against};
 use http_body_util::BodyExt;
 use tower::ServiceExt;
+
+struct Answer {
+    status: StatusCode,
+    content_type: String,
+    retry_after: Option<String>,
+    body: String,
+}
+
+async fn request(app: &Router, uri: &str, accept_language: Option<&str>) -> Answer {
+    let mut builder = Request::builder().uri(uri);
+    if let Some(value) = accept_language {
+        builder = builder.header(header::ACCEPT_LANGUAGE, value);
+    }
+    let response = app
+        .clone()
+        .oneshot(builder.body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    let header_text = |name| {
+        response
+            .headers()
+            .get(name)
+            .map(|value: &axum::http::HeaderValue| value.to_str().unwrap().to_string())
+    };
+    let status = response.status();
+    let content_type = header_text(header::CONTENT_TYPE).unwrap_or_default();
+    let retry_after = header_text(header::RETRY_AFTER);
+    let bytes = response.into_body().collect().await.unwrap().to_bytes();
+    Answer {
+        status,
+        content_type,
+        retry_after,
+        body: String::from_utf8_lossy(&bytes).into_owned(),
+    }
+}
 
 async fn get_page(app: &Router, uri: &str) -> (StatusCode, String, Option<String>) {
     let response = app
@@ -140,6 +175,82 @@ async fn bad_requests_explain_themselves() {
     assert!(
         seen.lock().unwrap().is_empty(),
         "invalid requests never reach the API"
+    );
+}
+
+#[tokio::test]
+async fn malformed_links_get_a_page_not_the_extractors_words() {
+    let (app, seen) = app().await;
+    for (uri, expected) in [
+        ("/sheet", "A sheet holds 1 to 12 puzzles."),
+        (
+            "/sheet/new?count=abc",
+            "<code>count</code> must be a number",
+        ),
+        ("/sheet/new?count=13", "got <code>13</code>"),
+        ("/sheet?ids=00008&ids=000Zo", "The link could not be read."),
+    ] {
+        let response = request(&app, uri, None).await;
+        assert_eq!(response.status, StatusCode::BAD_REQUEST, "{uri}");
+        assert!(
+            response.content_type.starts_with("text/html"),
+            "{uri} answered {}",
+            response.content_type
+        );
+        assert!(response.body.contains(expected), "{uri}: {}", response.body);
+        assert!(response.body.contains("Back to the form"), "{uri}");
+    }
+    assert!(seen.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn refusals_read_in_the_sheets_language() {
+    let (app, _) = app().await;
+    let (status, html, _) = get_page(&app, "/sheet?ids=nope1&lang=es").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert!(
+        html.contains("No hay ningún ejercicio <code>nope1</code>."),
+        "{html}"
+    );
+    assert!(html.contains("Volver al formulario"));
+}
+
+#[tokio::test]
+async fn an_unknown_language_is_refused_in_the_browsers() {
+    let (app, _) = app().await;
+    let response = request(&app, "/sheet/new?lang=fr", Some("es-CL")).await;
+    assert_eq!(response.status, StatusCode::BAD_REQUEST);
+    assert!(response.body.contains("<code>lang</code> debe ser es o en"));
+
+    // The front door stays lenient.
+    let response = request(&app, "/?lang=fr", Some("es-CL")).await;
+    assert_eq!(response.status, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn a_blank_title_prints_the_default() {
+    let (app, _) = app().await;
+    let (status, html, _) = get_page(&app, "/sheet?ids=00008&title=%20%20&lang=en").await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(html.contains("<h1>Chess exercises</h1>"));
+    assert!(!html.contains("<h1></h1>"));
+}
+
+#[tokio::test]
+async fn a_busy_api_says_so_and_when_to_retry() {
+    let (app, _) = app().await;
+    let response = request(&app, &format!("/sheet?ids={BUSY_ID}&lang=en"), None).await;
+    assert_eq!(response.status, StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(
+        response.retry_after.as_deref(),
+        Some(BUSY_RETRY_AFTER.to_string().as_str())
+    );
+    assert!(
+        response
+            .body
+            .contains(&format!("busy. Try again in {BUSY_RETRY_AFTER} seconds")),
+        "{}",
+        response.body
     );
 }
 

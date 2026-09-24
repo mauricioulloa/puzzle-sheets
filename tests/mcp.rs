@@ -6,7 +6,7 @@ mod common;
 use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use common::{PUBLIC_URL, app, app_against};
+use common::{BUSY_RETRY_AFTER, BUSY_THEME, PUBLIC_URL, app, app_against};
 use http_body_util::BodyExt;
 use puzzle_sheets::chess::options::{LEVELS, THEMES};
 use serde_json::{Value, json};
@@ -151,6 +151,21 @@ async fn agents_are_told_what_went_wrong() {
     assert!(
         message.contains("zugzwang"),
         "it lists the themes that do exist"
+    );
+
+    let response = call(&app, "create_worksheet", json!({"answers": "footer"})).await;
+    let message = response["error"]["message"].as_str().expect("an error");
+    assert_eq!(message, "`answers` must be page or none; got `footer`.");
+}
+
+#[tokio::test]
+async fn a_busy_api_tells_the_agent_when_to_retry() {
+    let (app, _) = app().await;
+    let response = call(&app, "create_worksheet", json!({"theme": BUSY_THEME})).await;
+    let message = response["error"]["message"].as_str().expect("an error");
+    assert_eq!(
+        message,
+        format!("The puzzle service is busy. Try again in {BUSY_RETRY_AFTER}s.")
     );
 }
 

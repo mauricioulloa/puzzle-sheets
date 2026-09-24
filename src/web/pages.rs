@@ -147,18 +147,40 @@ pub fn landing(lang: Lang) -> String {
         .replace("__FOOTER_PIECES__", text.footer_pieces)
 }
 
+/// A refusal or a failure, with the way back to the form. Messages quote
+/// parameters in backticks, which read as code here.
 pub fn error(message: &str, lang: Lang) -> String {
     format!(
-        "<!doctype html><html lang=\"{}\"><head><meta charset=\"utf-8\">\
+        "<!doctype html><html lang=\"{code}\"><head><meta charset=\"utf-8\">\
          <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\
+         <meta name=\"robots\" content=\"noindex\">\
          <title>puzzle-sheets</title></head>\
          <body style=\"font:16px/1.6 ui-sans-serif,system-ui,-apple-system,sans-serif;\
          max-width:52rem;margin:2.5rem auto;padding:0 1rem;color:#1a1a1a;background:#fbfaf8\">\
-         <p>{}</p><p><a href=\"/?lang={}\" style=\"color:#3c6e47\">←</a></p></body></html>",
-        lang.code(),
-        escape(message),
-        lang.code()
+         <p>{message}</p><p><a href=\"/?lang={code}\" style=\"color:#3c6e47\">← {back}</a></p></body></html>",
+        code = lang.code(),
+        message = code_spans(&escape(message)),
+        back = lang.text().back,
     )
+}
+
+/// `x` becomes <code>x</code>; an unpaired backtick is left as it is.
+fn code_spans(escaped: &str) -> String {
+    let parts: Vec<&str> = escaped.split('`').collect();
+    if parts.len().is_multiple_of(2) {
+        return escaped.to_string();
+    }
+    let mut out = String::with_capacity(escaped.len());
+    for (index, part) in parts.iter().enumerate() {
+        if index % 2 == 1 {
+            out.push_str("<code>");
+            out.push_str(part);
+            out.push_str("</code>");
+        } else {
+            out.push_str(part);
+        }
+    }
+    out
 }
 
 /// Follows the llms.txt convention, in the same shape as chess-puzzle-api's:
@@ -246,6 +268,19 @@ mod tests {
         assert!(html.contains(&format!("value=\"{DEFAULT_LEVEL}\" selected")));
         assert!(!html.contains("__"), "no placeholder survives");
         assert!(html.contains("href=\"/?lang=en\""));
+    }
+
+    #[test]
+    fn an_error_page_quotes_code_and_leads_back() {
+        let html = error("`lang` must be es or en; got `<b>`.", Lang::En);
+        assert!(html.contains("<code>lang</code> must be es or en; got <code>&lt;b&gt;</code>."));
+        assert!(html.contains("href=\"/?lang=en\""));
+        assert!(html.contains("Back to the form"));
+        assert_eq!(
+            code_spans("a ` b"),
+            "a ` b",
+            "an odd backtick is left alone"
+        );
     }
 
     #[test]

@@ -6,14 +6,23 @@ pub mod options;
 
 use crate::i18n::{Lang, Text};
 use crate::sheet::Item;
+use crate::worksheet::{Invalid, WorksheetError};
 use api::{ChessApi, ChessApiError, Puzzle, Solution};
 use futures_util::future::try_join_all;
 
 /// Fetches the puzzles in the order given, each with its solution.
-pub async fn items(api: &ChessApi, ids: &[String], lang: Lang) -> Result<Vec<Item>, ChessApiError> {
+pub async fn items(
+    api: &ChessApi,
+    ids: &[String],
+    lang: Lang,
+) -> Result<Vec<Item>, WorksheetError> {
     let fetches = ids.iter().map(|id| async move {
-        let (puzzle, solution) = tokio::try_join!(api.puzzle(id), api.solution(id))?;
-        Ok::<_, ChessApiError>(item(&puzzle, &solution, lang))
+        let (puzzle, solution) =
+            tokio::try_join!(api.puzzle(id), api.solution(id)).map_err(|err| match err {
+                ChessApiError::NotFound => Invalid::UnknownPuzzle(id.clone()).into(),
+                other => WorksheetError::from(other),
+            })?;
+        Ok::<_, WorksheetError>(item(&puzzle, &solution, lang))
     });
     try_join_all(fetches).await
 }

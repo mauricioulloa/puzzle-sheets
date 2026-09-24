@@ -41,8 +41,26 @@ fn solution(id: &str) -> Value {
     }
 }
 
-async fn stub_random(State(seen): State<Seen>, RawQuery(query): RawQuery) -> Json<Value> {
+/// The theme and the id the stand-in answers `429` to, the way the API does
+/// over its rate limit.
+pub const BUSY_THEME: &str = "zugzwang";
+pub const BUSY_ID: &str = "busy1";
+pub const BUSY_RETRY_AFTER: u64 = 17;
+
+fn busy() -> Response {
+    (
+        StatusCode::TOO_MANY_REQUESTS,
+        [("retry-after", BUSY_RETRY_AFTER.to_string())],
+        Json(json!({"error": "rate_limited", "message": "Rate limit exceeded."})),
+    )
+        .into_response()
+}
+
+async fn stub_random(State(seen): State<Seen>, RawQuery(query): RawQuery) -> Response {
     let query = query.unwrap_or_default();
+    if query.contains(&format!("themes={BUSY_THEME}")) {
+        return busy();
+    }
     let count: usize = query
         .split('&')
         .find_map(|pair| pair.strip_prefix("count="))
@@ -55,7 +73,7 @@ async fn stub_random(State(seen): State<Seen>, RawQuery(query): RawQuery) -> Jso
         .take(count)
         .filter_map(|id| puzzle(id))
         .collect();
-    Json(json!({"count": puzzles.len(), "puzzles": puzzles}))
+    Json(json!({"count": puzzles.len(), "puzzles": puzzles})).into_response()
 }
 
 fn not_found(id: &str) -> Response {
@@ -67,6 +85,9 @@ fn not_found(id: &str) -> Response {
 }
 
 async fn stub_puzzle(Path(id): Path<String>) -> Response {
+    if id == BUSY_ID {
+        return busy();
+    }
     match puzzle(&id) {
         Some(body) => Json(body).into_response(),
         None => not_found(&id),
@@ -74,6 +95,9 @@ async fn stub_puzzle(Path(id): Path<String>) -> Response {
 }
 
 async fn stub_solution(Path(id): Path<String>) -> Response {
+    if id == BUSY_ID {
+        return busy();
+    }
     match puzzle(&id) {
         Some(_) => Json(solution(&id)).into_response(),
         None => not_found(&id),

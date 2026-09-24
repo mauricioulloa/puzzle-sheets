@@ -1,5 +1,6 @@
-//! Spanish and English. Sheets carry little text, so every string lives here
-//! rather than in a translation framework.
+//! Spanish and English. Sheets carry little text, so every fixed string lives
+//! here rather than in a translation framework. Messages with a value in them
+//! live beside the error they describe, in `worksheet::Invalid`.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Lang {
@@ -60,6 +61,9 @@ pub struct Text {
     pub licence: &'static str,
     pub no_puzzles: &'static str,
     pub service_down: &'static str,
+    pub service_busy: &'static str,
+    pub seconds: &'static str,
+    pub back: &'static str,
 }
 
 static ES: Text = Text {
@@ -78,7 +82,10 @@ static ES: Text = Text {
     goal_best_move: "Encuentra la mejor jugada",
     licence: "Libre para copiar e imprimir (CC0).",
     no_puzzles: "No hay suficientes ejercicios de ese tema en esa dificultad. Prueba con otra dificultad o con cualquier tema.",
-    service_down: "El servicio de ejercicios no respondió a tiempo. Inténtalo de nuevo en un momento.",
+    service_down: "El servicio de ejercicios no respondió. Inténtalo de nuevo en un momento.",
+    service_busy: "El servicio de ejercicios está ocupado. Inténtalo de nuevo en",
+    seconds: "segundos",
+    back: "Volver al formulario",
 };
 
 static EN: Text = Text {
@@ -97,7 +104,10 @@ static EN: Text = Text {
     goal_best_move: "Find the best move",
     licence: "Free to copy and print (CC0).",
     no_puzzles: "There are not enough puzzles on that theme at that difficulty. Try another difficulty, or any theme.",
-    service_down: "The puzzle service did not answer in time. Try again in a moment.",
+    service_down: "The puzzle service did not answer. Try again in a moment.",
+    service_busy: "The puzzle service is busy. Try again in",
+    seconds: "seconds",
+    back: "Back to the form",
 };
 
 #[cfg(test)]

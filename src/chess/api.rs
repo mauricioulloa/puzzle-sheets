@@ -28,11 +28,6 @@ struct Batch {
     puzzles: Vec<Puzzle>,
 }
 
-#[derive(Deserialize)]
-struct ErrorBody {
-    message: String,
-}
-
 /// What a worksheet asks the API for.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Filter {
@@ -44,9 +39,13 @@ pub struct Filter {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ChessApiError {
-    /// The API understood the request and refused it; the message says why.
-    #[error("{0}")]
-    Rejected(String),
+    /// No puzzle answers to this id.
+    #[error("not found")]
+    NotFound,
+    /// The API is over its rate limit or stopped a slow search. Worth
+    /// retrying, unlike everything else here.
+    #[error("chess-puzzle-api is busy")]
+    Busy { retry_after: Option<u64> },
     #[error("{0:#}")]
     Failed(#[from] anyhow::Error),
 }
@@ -71,6 +70,7 @@ impl ChessApi {
         }
     }
 
+    /// Up to `count` puzzles; none when the filter matches nothing.
     pub async fn random(
         &self,
         filter: &Filter,
@@ -84,8 +84,12 @@ impl ChessApi {
         if let Some(theme) = filter.theme {
             query.push(("themes", theme.to_string()));
         }
-        let batch: Batch = self.get("/v1/puzzles/random", &query).await?;
-        Ok(batch.puzzles)
+        match self.get::<Batch>("/v1/puzzles/random", &query).await {
+            Ok(batch) => Ok(batch.puzzles),
+            // The API's 404 for a filter that matches nothing.
+            Err(ChessApiError::NotFound) => Ok(Vec::new()),
+            Err(err) => Err(err),
+        }
     }
 
     pub async fn puzzle(&self, id: &str) -> Result<Puzzle, ChessApiError> {
@@ -114,12 +118,25 @@ impl ChessApi {
             .with_context(|| format!("calling chess-puzzle-api {path}"))?;
 
         let status = response.status();
-        if status == StatusCode::BAD_REQUEST || status == StatusCode::NOT_FOUND {
-            let body: ErrorBody = response.json().await.context("reading the API's error")?;
-            return Err(ChessApiError::Rejected(body.message));
+        if status == StatusCode::NOT_FOUND {
+            return Err(ChessApiError::NotFound);
         }
+        if status == StatusCode::TOO_MANY_REQUESTS || status == StatusCode::SERVICE_UNAVAILABLE {
+            let retry_after = response
+                .headers()
+                .get(reqwest::header::RETRY_AFTER)
+                .and_then(|value| value.to_str().ok())
+                .and_then(|value| value.parse().ok());
+            tracing::warn!("chess-puzzle-api {path} returned {status}");
+            return Err(ChessApiError::Busy { retry_after });
+        }
+        // Everything sent here has been validated first, so a 400 means the
+        // two services disagree, not that the visitor made a mistake.
         if !status.is_success() {
-            return Err(anyhow::anyhow!("chess-puzzle-api {path} returned {status}").into());
+            let body = response.text().await.unwrap_or_default();
+            return Err(
+                anyhow::anyhow!("chess-puzzle-api {path} returned {status}: {body}").into(),
+            );
         }
         Ok(response
             .json()

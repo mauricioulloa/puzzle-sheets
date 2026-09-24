@@ -4,9 +4,8 @@
 
 use crate::chess::options::{LEVELS, THEMES};
 use crate::i18n::Lang;
-use crate::sheet::Answers;
 use crate::web::routes::SharedState;
-use crate::worksheet::{self, WorksheetError};
+use crate::worksheet::{self, Invalid, WorksheetError};
 use rmcp::handler::server::wrapper::{Json, Parameters};
 use rmcp::model::{ErrorData, Implementation, ServerCapabilities, ServerConfig};
 use rmcp::{ServerHandler, schemars, tool, tool_handler, tool_router};
@@ -68,21 +67,28 @@ pub struct Worksheet {
     pub puzzle_ids: Vec<String>,
 }
 
-fn invalid(message: impl Into<String>) -> ErrorData {
-    ErrorData::invalid_params(message.into(), None)
-}
-
-fn parse_lang(raw: Option<&str>) -> Result<Lang, ErrorData> {
-    match raw {
-        None => Ok(Lang::default()),
-        Some(value) => Lang::parse(value).ok_or_else(|| invalid("lang must be es or en")),
+/// Agents read English most reliably, so refusals are in English whatever
+/// language the sheet is in.
+impl From<Invalid> for ErrorData {
+    fn from(invalid: Invalid) -> Self {
+        ErrorData::invalid_params(invalid.message(Lang::En), None)
     }
 }
 
 impl From<WorksheetError> for ErrorData {
     fn from(err: WorksheetError) -> Self {
         match err {
-            WorksheetError::Invalid(message) => invalid(message),
+            WorksheetError::Invalid(invalid) => invalid.into(),
+            WorksheetError::Busy { retry_after } => {
+                let when = retry_after.map_or_else(
+                    || "in a minute".to_string(),
+                    |seconds| format!("in {seconds}s"),
+                );
+                ErrorData::internal_error(
+                    format!("The puzzle service is busy. Try again {when}."),
+                    None,
+                )
+            }
             WorksheetError::Upstream(err) => {
                 tracing::error!("mcp tool failed: {err:#}");
                 ErrorData::internal_error("The puzzle service failed to answer.", None)
@@ -112,7 +118,7 @@ impl SheetTools {
         &self,
         Parameters(args): Parameters<ListOptionsArgs>,
     ) -> Result<Json<Options>, ErrorData> {
-        let lang = parse_lang(args.lang.as_deref())?;
+        let lang = worksheet::parse_lang(args.lang.as_deref())?.unwrap_or_default();
         Ok(Json(Options {
             levels: LEVELS
                 .iter()
@@ -144,18 +150,12 @@ impl SheetTools {
         &self,
         Parameters(args): Parameters<CreateWorksheetArgs>,
     ) -> Result<Json<Worksheet>, ErrorData> {
-        let answers = match args.answers.as_deref() {
-            None => Answers::default(),
-            Some(value) => {
-                Answers::parse(value).ok_or_else(|| invalid("answers must be page or none"))?
-            }
-        };
         let request = worksheet::Request {
             level: args.level,
             theme: args.theme,
             count: args.count,
-            lang: parse_lang(args.lang.as_deref())?,
-            answers,
+            lang: worksheet::parse_lang(args.lang.as_deref())?.unwrap_or_default(),
+            answers: worksheet::parse_answers(args.answers.as_deref())?,
             title: args.title,
         };
         let created = worksheet::create(&self.state.api, request).await?;

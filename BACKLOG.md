@@ -56,15 +56,7 @@ options chosen, per day, nothing about who. Enough to see which topics matter.
 
 ## 3 · The sheet
 
-### 6. Say so when the API is busy
-
-A sheet of twelve costs 25 requests to chess-puzzle-api. When the API answers
-`429`, the visitor is told the puzzle service "did not answer in time", which
-is not what happened. It should say the service is busy, pass on the API's
-`Retry-After`, and answer `503` rather than `502`. The same for the API's own
-`503` when a search is stopped by its five-second cap.
-
-### 7. More per page, or fewer
+### 6. More per page, or fewer
 
 ChessMint offers 1, 2, 4, 6 and 12 diagrams to a page. Six is a good default;
 whether teachers want bigger boards for young children, or denser review
@@ -78,14 +70,14 @@ The same diagnosis as chess-puzzle-api's: one page, no `robots.txt`, no
 sitemap, no favicon, no Open Graph. A link shared in a teachers' group chat
 previews as nothing.
 
-### 8. The basics
+### 7. The basics
 
 `robots.txt`, `sitemap.xml`, a favicon, `<link rel="canonical">`, Open Graph
 tags in both languages, and a fixed preview image — a board and the site
 name. Sheets themselves should be `noindex`: each is a list of ids, not
 content.
 
-### 9. Submit to the MCP registries — **[needs you]**
+### 8. Submit to the MCP registries — **[needs you]**
 
 Together with chess-puzzle-api's own submission ("Submit to the MCP
 registries" in its backlog): the official registry, Smithery, Glama, mcp.so
@@ -95,19 +87,19 @@ and PulseMCP.
 
 ## 5 · Later
 
-### 10. Fewer requests per sheet
+### 9. Fewer requests per sheet
 
 Once chess-puzzle-api can look puzzles up in batches ("Look puzzles up in
 batches" in its backlog), a twelve-puzzle sheet drops from 25 requests to
 three.
 
-### 11. A verification script for production
+### 10. A verification script for production
 
 Like chess-puzzle-api's `scripts/verify_production.py`: make a sheet on the
 live service, open its link, and check that the puzzles and solutions it
 prints match the API's.
 
-### 12. A second puzzle type
+### 11. A second puzzle type
 
 The sheet already takes any diagram, prompt, detail and solution. Sudoku or
 mazes are the natural next ones, generated here from a seed so a link stays

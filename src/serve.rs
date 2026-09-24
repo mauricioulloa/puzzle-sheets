@@ -42,6 +42,12 @@ pub async fn run(args: ServeArgs) -> Result<()> {
     if args.chess_api_key.is_none() {
         tracing::warn!("no CHESS_API_KEY: sheets share the anonymous rate limit");
     }
+    if !args.mcp_allowed_hosts.is_empty() {
+        tracing::info!(
+            "MCP endpoint answers to {}",
+            args.mcp_allowed_hosts.join(", ")
+        );
+    }
     let state = Arc::new(AppState {
         api: ChessApi::new(&args.chess_api_url, args.chess_api_key),
         public_url: args.public_url.trim_end_matches('/').to_string(),
@@ -64,10 +70,12 @@ pub async fn run(args: ServeArgs) -> Result<()> {
 }
 
 /// Waits for either interactive interruption or the signal an orchestrator
-/// actually sends on every deploy.
+/// actually sends. Listening only for SIGINT would mean every deploy killed
+/// the process outright, cutting off a sheet someone was waiting on.
 async fn shutdown_signal() {
     let interrupt = async {
         let _ = tokio::signal::ctrl_c().await;
+        "SIGINT"
     };
 
     #[cfg(unix)]
@@ -75,20 +83,21 @@ async fn shutdown_signal() {
         match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
             Ok(mut stream) => {
                 stream.recv().await;
+                "SIGTERM"
             }
             Err(err) => {
                 tracing::warn!("cannot listen for SIGTERM: {err}");
-                std::future::pending::<()>().await;
+                std::future::pending().await
             }
         }
     };
 
     #[cfg(not(unix))]
-    let terminate = std::future::pending::<()>();
+    let terminate = std::future::pending::<&str>();
 
-    tokio::select! {
-        () = interrupt => {},
-        () = terminate => {},
-    }
-    tracing::info!("shutting down");
+    let signal = tokio::select! {
+        signal = interrupt => signal,
+        signal = terminate => signal,
+    };
+    tracing::info!("received {signal}, shutting down");
 }

@@ -5,7 +5,49 @@ English. Free, light on ink, and in the public domain.
 
 **Live at [puzzles.mauriulloa.com](https://puzzles.mauriulloa.com)**
 
-By [Mauri Ulloa](https://mauriulloa.com)
+```
+https://puzzles.mauriulloa.com/sheet/new?level=beginner&theme=fork&lang=en
+```
+
+By [Mauri Ulloa](https://mauriulloa.com) · [For agents](https://puzzles.mauriulloa.com/llms.txt)
+
+## The one thing to know
+
+A sheet is its URL. `/sheet/new` picks puzzles and redirects to
+`/sheet?ids=...`, and that link always prints the same puzzles with the same
+solutions. Nothing is stored, so save or share the link, not the page.
+
+```
+/sheet/new?level=beginner&theme=fork&count=12&lang=es&title=3º básico
+/sheet/new?level=advanced&answers=none
+/sheet?ids=00008,00014
+```
+
+## Endpoints
+
+| | |
+| --- | --- |
+| `GET /` | the form, in the browser's language or `?lang=` |
+| `GET /sheet/new` | picks puzzles and redirects to the sheet |
+| `GET /sheet` | a sheet of specific puzzles, by Lichess id |
+| `GET /llms.txt` | what this is, for a language model |
+| `GET /health` | `{"status":"ok"}` while the process is up |
+| `POST /mcp` | the same, as MCP tools, for agents |
+
+Parameters of `/sheet/new`; `/sheet` takes the same except `count`, plus
+`ids`:
+
+| | |
+| --- | --- |
+| `level` | one of the five below; default `novice` |
+| `theme` | one Lichess theme; leave it out for any |
+| `count` | 1 to 12, six to a page; default 6 |
+| `lang` | `es` or `en`; default from `Accept-Language` |
+| `answers` | `page` (default) or `none` |
+| `title` | the heading printed on the sheet, up to 80 characters |
+
+An unknown level or theme is a `400` that lists the ones that exist, rather
+than a sheet of something else.
 
 ## What a sheet looks like
 
@@ -47,18 +89,6 @@ each player's own rating.
 The form and the sheet print the band next to the level, so the number is
 always in sight. Rating and theme are the only criteria, as on Lichess.
 
-## Links, not files
-
-A sheet is its URL. `/sheet/new` picks puzzles and redirects to
-`/sheet?ids=...`, and that link always prints the same puzzles with the same
-solutions. Nothing is stored.
-
-```
-/sheet/new?level=beginner&theme=fork&count=12&lang=es&title=3º básico
-/sheet/new?level=advanced&answers=none
-/sheet?ids=00008,00014
-```
-
 ## For language models
 
 `POST /mcp` is a Model Context Protocol server with `list_options` and
@@ -75,6 +105,10 @@ draws the boards as SVG, lays out the sheet for A4 and Letter alike, and
 leaves PDF to the browser's own print dialog. A request to the API that takes
 longer than 20 seconds becomes an error page rather than a hung browser.
 
+A sheet costs one request to chess-puzzle-api to pick the puzzles plus two
+per puzzle to print them, so a twelve-puzzle sheet is 25 requests. The API
+allows 30 a minute without a key, which is why production runs with one.
+
 The sheet itself does not know it is chess. A puzzle type supplies a diagram,
 a prompt, a detail line and a solution; the layout and the solutions work the
 same for whatever comes next.
@@ -85,24 +119,46 @@ same for whatever comes next.
 cargo run -- serve
 ```
 
-It reads `CHESS_API_URL` (defaults to the public API), `CHESS_API_KEY`,
-`PUBLIC_URL`, `BIND_ADDR` and `MCP_ALLOWED_HOSTS`. Without a key every sheet
-shares the API's anonymous rate limit, and a sheet costs one request to pick
-the puzzles plus two per puzzle to print them.
+`serve` reads `CHESS_API_URL` (defaults to the public API), `CHESS_API_KEY`,
+`PUBLIC_URL`, `BIND_ADDR` and `MCP_ALLOWED_HOSTS` — set the last one to your
+domain or `/mcp` refuses every caller as a rebinding attempt. Without a key
+every sheet shares the API's anonymous rate limit.
 
 ```bash
 cargo test && cargo clippy --all-targets
 ```
 
-Tests run against a stand-in for the API: no network needed.
+Tests run against a stand-in for the API that serves two known puzzles: no
+network needed.
+
+## Operating
+
+What the production deployment on Fly needs, for whoever runs it next.
+
+**Stateless.** No volume and nothing to back up: every sheet is rebuilt from
+its URL. The machine stops when idle and starts on the next request, so the
+first visitor after a quiet spell waits for it to boot.
+
+**The API key** is a Fly secret, never in `fly.toml`. It is minted on
+chess-puzzle-api with `keys create`, and setting it restarts the machine:
+```bash
+fly secrets set CHESS_API_KEY=cpa_...
+```
+
+**Levels follow chess-puzzle-api.** The five rating bands are the same in
+both services, so a change to them is made in both, or the trainer and the
+sheets disagree about what "beginner" means.
 
 ## Feedback
+
+What is planned next, and why, is in [BACKLOG.md](BACKLOG.md).
 
 This is a first version, and what comes next depends on the people using it.
 A topic that is missing, a level that feels wrong, a layout that does not
 print well in your school — please
 [open an issue](https://github.com/mauricioulloa/puzzle-sheets/issues).
-What is already planned is in [BACKLOG.md](BACKLOG.md).
+Reports of how you use the sheets are just as welcome and will shape what
+goes into the next version.
 
 ## Attribution
 

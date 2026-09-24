@@ -9,6 +9,7 @@ use rmcp::transport::streamable_http_server::tower::StreamableHttpServerConfig;
 use std::sync::Arc;
 use tower_http::compression::CompressionLayer;
 use tower_http::trace::TraceLayer;
+
 pub struct AppState {
     pub api: ChessApi,
     /// Absolute origin for links handed to agents, which cannot resolve a
@@ -18,6 +19,8 @@ pub struct AppState {
 
 pub type SharedState = Arc<AppState>;
 
+/// `mcp_allowed_hosts` are the public hostnames `/mcp` answers to, beyond the
+/// loopback names rmcp allows out of the box (see `ServeArgs`).
 pub fn router(state: SharedState, mcp_allowed_hosts: &[String]) -> Router {
     // Stateless, like chess-puzzle-api's: no sessions to keep, nothing lost
     // on a restart.

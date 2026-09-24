@@ -15,6 +15,11 @@ use serde::{Deserialize, Serialize};
 /// long.
 const DEFAULT_RETRY_SECS: u64 = 60;
 
+/// A sheet's page never changes: its URL lists the puzzles, and a puzzle
+/// never changes between imports. A day is long enough to spare the API a
+/// teacher reopening the link, short enough to pick up a new layout.
+const SHEET_CACHE_CONTROL: &str = "public, max-age=86400";
+
 fn browser_lang(headers: &HeaderMap) -> Lang {
     Lang::from_accept_language(
         headers
@@ -148,8 +153,22 @@ pub async fn sheet(
         Ok(lang) => lang,
         Err(invalid) => return failure(invalid.into(), browser_lang(&headers)),
     };
+    let explicit_lang = params.lang.is_some();
     match render_sheet(&state, params, lang).await {
-        Ok(html) => Html(html).into_response(),
+        Ok(html) => {
+            let mut response = Html(html).into_response();
+            let headers = response.headers_mut();
+            headers.insert(
+                header::CACHE_CONTROL,
+                HeaderValue::from_static(SHEET_CACHE_CONTROL),
+            );
+            if !explicit_lang {
+                // The language came from the browser, so a cache must not
+                // hand this copy to a browser that prefers the other one.
+                headers.append(header::VARY, HeaderValue::from_static("accept-language"));
+            }
+            response
+        }
         Err(err) => failure(err, lang),
     }
 }

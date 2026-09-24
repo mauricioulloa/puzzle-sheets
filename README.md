@@ -105,9 +105,13 @@ draws the boards as SVG, lays out the sheet for A4 and Letter alike, and
 leaves PDF to the browser's own print dialog. A request to the API that takes
 longer than 20 seconds becomes an error page rather than a hung browser.
 
-A sheet costs one request to chess-puzzle-api to pick the puzzles plus two
-per puzzle to print them, so a twelve-puzzle sheet is 25 requests. The API
-allows 30 a minute without a key, which is why production runs with one.
+Puzzles and solutions never change between imports, so they are kept in
+memory once fetched, and a sheet's page may be cached by the browser for a
+day. A new twelve-puzzle sheet costs 13 requests to chess-puzzle-api: one to
+pick the puzzles, which brings them along, and one per solution. A shared
+link opened on a freshly started machine costs 24, and reopening a sheet
+costs nothing. The API allows 30 a minute without a key, which is why
+production runs with one.
 
 The sheet itself does not know it is chess. A puzzle type supplies a diagram,
 a prompt, a detail line and a solution; the layout and the solutions work the

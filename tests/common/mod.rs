@@ -13,7 +13,8 @@ use std::sync::{Arc, Mutex};
 
 pub const PUBLIC_URL: &str = "https://sheets.example";
 
-/// The query string of every `/v1/puzzles/random` call, in order.
+/// Every request the stand-in answered, in order: a pick as its query
+/// string, a lookup as its path.
 pub type Seen = Arc<Mutex<Vec<String>>>;
 
 fn puzzle(id: &str) -> Option<Value> {
@@ -84,7 +85,8 @@ fn not_found(id: &str) -> Response {
         .into_response()
 }
 
-async fn stub_puzzle(Path(id): Path<String>) -> Response {
+async fn stub_puzzle(State(seen): State<Seen>, Path(id): Path<String>) -> Response {
+    seen.lock().unwrap().push(format!("/v1/puzzles/{id}"));
     if id == BUSY_ID {
         return busy();
     }
@@ -94,7 +96,10 @@ async fn stub_puzzle(Path(id): Path<String>) -> Response {
     }
 }
 
-async fn stub_solution(Path(id): Path<String>) -> Response {
+async fn stub_solution(State(seen): State<Seen>, Path(id): Path<String>) -> Response {
+    seen.lock()
+        .unwrap()
+        .push(format!("/v1/puzzles/{id}/solution"));
     if id == BUSY_ID {
         return busy();
     }

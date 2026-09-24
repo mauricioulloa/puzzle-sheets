@@ -90,8 +90,8 @@ and PulseMCP.
 ### 9. Fewer requests per sheet
 
 Once chess-puzzle-api can look puzzles up in batches ("Look puzzles up in
-batches" in its backlog), a twelve-puzzle sheet drops from 25 requests to
-three.
+batches" in its backlog), a new twelve-puzzle sheet drops from 13 requests to
+two, and a shared link on a cold machine from 24 to two.
 
 ### 10. A verification script for production
 

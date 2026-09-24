@@ -3,9 +3,16 @@
 use anyhow::{Context, Result};
 use reqwest::StatusCode;
 use serde::Deserialize;
+use std::collections::HashMap;
+use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
 const TIMEOUT: Duration = Duration::from_secs(20);
+
+/// Puzzles and solutions kept in memory, each. A puzzle never changes
+/// between imports, so an entry is never stale; the cap only bounds memory,
+/// at a few hundred bytes an entry.
+const CACHE_CAPACITY: usize = 10_000;
 
 /// Only the fields a worksheet uses.
 #[derive(Debug, Clone, Deserialize)]
@@ -50,10 +57,47 @@ pub enum ChessApiError {
     Failed(#[from] anyhow::Error),
 }
 
+/// A map that stops growing at its capacity by forgetting an arbitrary
+/// entry. Crude, but every entry is equally cheap to fetch again.
+struct Cache<V> {
+    entries: Mutex<HashMap<String, V>>,
+}
+
+impl<V: Clone> Cache<V> {
+    fn new() -> Self {
+        Self {
+            entries: Mutex::new(HashMap::new()),
+        }
+    }
+
+    fn get(&self, id: &str) -> Option<V> {
+        self.lock().get(id).cloned()
+    }
+
+    fn insert(&self, id: &str, value: V) {
+        let mut entries = self.lock();
+        if entries.len() >= CACHE_CAPACITY
+            && !entries.contains_key(id)
+            && let Some(evicted) = entries.keys().next().cloned()
+        {
+            entries.remove(&evicted);
+        }
+        entries.insert(id.to_string(), value);
+    }
+
+    /// Nothing panics while holding the lock, and a map that did would still
+    /// be whole, so a poisoned lock is used as it is.
+    fn lock(&self) -> MutexGuard<'_, HashMap<String, V>> {
+        self.entries.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+}
+
 pub struct ChessApi {
     http: reqwest::Client,
     base_url: String,
     key: Option<String>,
+    puzzles: Cache<Puzzle>,
+    solutions: Cache<Solution>,
 }
 
 impl ChessApi {
@@ -67,10 +111,13 @@ impl ChessApi {
                 .expect("a client with a timeout always builds"),
             base_url: base_url.trim_end_matches('/').to_string(),
             key,
+            puzzles: Cache::new(),
+            solutions: Cache::new(),
         }
     }
 
-    /// Up to `count` puzzles; none when the filter matches nothing.
+    /// Up to `count` puzzles; none when the filter matches nothing. They are
+    /// remembered, so the sheet they are picked for needs only solutions.
     pub async fn random(
         &self,
         filter: &Filter,
@@ -85,7 +132,12 @@ impl ChessApi {
             query.push(("themes", theme.to_string()));
         }
         match self.get::<Batch>("/v1/puzzles/random", &query).await {
-            Ok(batch) => Ok(batch.puzzles),
+            Ok(batch) => {
+                for puzzle in &batch.puzzles {
+                    self.puzzles.insert(&puzzle.id, puzzle.clone());
+                }
+                Ok(batch.puzzles)
+            }
             // The API's 404 for a filter that matches nothing.
             Err(ChessApiError::NotFound) => Ok(Vec::new()),
             Err(err) => Err(err),
@@ -93,11 +145,21 @@ impl ChessApi {
     }
 
     pub async fn puzzle(&self, id: &str) -> Result<Puzzle, ChessApiError> {
-        self.get(&format!("/v1/puzzles/{id}"), &[]).await
+        if let Some(puzzle) = self.puzzles.get(id) {
+            return Ok(puzzle);
+        }
+        let puzzle: Puzzle = self.get(&format!("/v1/puzzles/{id}"), &[]).await?;
+        self.puzzles.insert(id, puzzle.clone());
+        Ok(puzzle)
     }
 
     pub async fn solution(&self, id: &str) -> Result<Solution, ChessApiError> {
-        self.get(&format!("/v1/puzzles/{id}/solution"), &[]).await
+        if let Some(solution) = self.solutions.get(id) {
+            return Ok(solution);
+        }
+        let solution: Solution = self.get(&format!("/v1/puzzles/{id}/solution"), &[]).await?;
+        self.solutions.insert(id, solution.clone());
+        Ok(solution)
     }
 
     async fn get<T: serde::de::DeserializeOwned>(
@@ -142,5 +204,25 @@ impl ChessApi {
             .json()
             .await
             .with_context(|| format!("decoding chess-puzzle-api {path}"))?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_cache_stops_at_its_capacity() {
+        let cache = Cache::new();
+        for n in 0..CACHE_CAPACITY + 5 {
+            cache.insert(&n.to_string(), n);
+        }
+        assert_eq!(cache.lock().len(), CACHE_CAPACITY);
+        let last = (CACHE_CAPACITY + 4).to_string();
+        assert_eq!(
+            cache.get(&last),
+            Some(CACHE_CAPACITY + 4),
+            "the newest stays"
+        );
     }
 }

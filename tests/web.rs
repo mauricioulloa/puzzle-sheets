@@ -14,6 +14,9 @@ struct Answer {
     status: StatusCode,
     content_type: String,
     retry_after: Option<String>,
+    cache_control: Option<String>,
+    /// Every Vary value; compression adds its own.
+    vary: Vec<String>,
     body: String,
 }
 
@@ -36,11 +39,20 @@ async fn request(app: &Router, uri: &str, accept_language: Option<&str>) -> Answ
     let status = response.status();
     let content_type = header_text(header::CONTENT_TYPE).unwrap_or_default();
     let retry_after = header_text(header::RETRY_AFTER);
+    let cache_control = header_text(header::CACHE_CONTROL);
+    let vary: Vec<String> = response
+        .headers()
+        .get_all(header::VARY)
+        .iter()
+        .map(|value| value.to_str().unwrap().to_ascii_lowercase())
+        .collect();
     let bytes = response.into_body().collect().await.unwrap().to_bytes();
     Answer {
         status,
         content_type,
         retry_after,
+        cache_control,
+        vary,
         body: String::from_utf8_lossy(&bytes).into_owned(),
     }
 }
@@ -159,8 +171,9 @@ async fn bad_requests_explain_themselves() {
     assert_eq!(status, StatusCode::BAD_REQUEST);
     assert!(
         html.contains("No puzzle with id"),
-        "the API's reason is passed on"
+        "a puzzle the API does not know is named"
     );
+    seen.lock().unwrap().clear();
 
     for uri in [
         "/sheet?ids=../v1/stats",
@@ -291,4 +304,46 @@ async fn llms_txt_links_to_the_public_address() {
         text.contains(&format!("{PUBLIC_URL}/mcp")),
         "an agent cannot resolve a relative link"
     );
+}
+
+#[tokio::test]
+async fn a_sheet_costs_the_api_only_what_it_has_not_seen() {
+    let (app, seen) = app().await;
+    let (_, _, location) = get_page(&app, "/sheet/new?count=2&lang=en").await;
+    let location = location.expect("redirect");
+    seen.lock().unwrap().clear();
+
+    get_page(&app, &location).await;
+    let first: Vec<String> = seen.lock().unwrap().drain(..).collect();
+    assert!(
+        first.iter().all(|path| path.ends_with("/solution")),
+        "the pick already brought the puzzles: {first:?}"
+    );
+    assert_eq!(first.len(), 2);
+
+    get_page(&app, &location).await;
+    assert!(
+        seen.lock().unwrap().is_empty(),
+        "a reopened sheet costs nothing"
+    );
+}
+
+#[tokio::test]
+async fn a_sheet_may_be_kept_but_an_error_may_not() {
+    let (app, _) = app().await;
+    let response = request(&app, "/sheet?ids=00008&lang=en", None).await;
+    assert_eq!(
+        response.cache_control.as_deref(),
+        Some("public, max-age=86400")
+    );
+    assert!(
+        !response.vary.iter().any(|value| value == "accept-language"),
+        "the language is in the URL"
+    );
+
+    let response = request(&app, "/sheet?ids=00008", Some("es")).await;
+    assert!(response.vary.iter().any(|value| value == "accept-language"));
+
+    let response = request(&app, "/sheet?ids=nope1", None).await;
+    assert_eq!(response.cache_control, None);
 }

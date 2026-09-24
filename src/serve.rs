@@ -20,8 +20,7 @@ pub struct ServeArgs {
     pub chess_api_url: String,
 
     /// API key for chess-puzzle-api. Without one every sheet shares the
-    /// anonymous rate limit, and a new sheet costs one request per puzzle
-    /// plus one.
+    /// anonymous rate limit.
     #[arg(long, env = "CHESS_API_KEY", hide_env_values = true)]
     pub chess_api_key: Option<String>,
 

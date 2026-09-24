@@ -39,45 +39,20 @@ chooses on the form, before generating, how descriptive the sheet is:
 
 ---
 
-## 2 · Learn from use
-
-### 4. Put it in front of real classrooms — **[needs you]**
-
-A handful of teachers and chess clubs, in Spanish and in English. What they
-print, what they skip, and what they ask for is worth more than any item
-below.
-
-### 5. Know which sheets are made
-
-Counters in the style of chess-puzzle-api's `/v1/usage`: levels, themes and
-options chosen, per day, nothing about who. Enough to see which topics matter.
-
----
-
-## 3 · The sheet
-
-### 6. More per page, or fewer
-
-ChessMint offers 1, 2, 4, 6 and 12 diagrams to a page. Six is a good default;
-whether teachers want bigger boards for young children, or denser review
-sheets, is a question for users.
-
----
-
-## 4 · Discoverability
+## 2 · Discoverability: people and agents
 
 The same diagnosis as chess-puzzle-api's: one page, no `robots.txt`, no
 sitemap, no favicon, no Open Graph. A link shared in a teachers' group chat
 previews as nothing.
 
-### 7. The basics
+### 4. The basics
 
 `robots.txt`, `sitemap.xml`, a favicon, `<link rel="canonical">`, Open Graph
 tags in both languages, and a fixed preview image — a board and the site
 name. Sheets themselves should be `noindex`: each is a list of ids, not
 content.
 
-### 8. Submit to the MCP registries — **[needs you]**
+### 5. Submit to the MCP registries — **[needs you]**
 
 Together with chess-puzzle-api's own submission ("Submit to the MCP
 registries" in its backlog): the official registry, Smithery, Glama, mcp.so
@@ -85,21 +60,53 @@ and PulseMCP.
 
 ---
 
+## 3 · Learn from use
+
+### 6. Put it in front of real classrooms — **[needs you]**
+
+A handful of teachers and chess clubs, in Spanish and in English. What they
+print, what they skip, and what they ask for is worth more than any item
+below.
+
+### 7. Know which sheets are made
+
+Counters in the style of chess-puzzle-api's `/v1/usage`: levels, themes and
+options chosen, per day, nothing about who. Enough to see which topics matter.
+
+---
+
+## 4 · The sheet
+
+### 8. A more beautiful sheet
+
+The same bare, ink-light line, drawn with more care: the typography of the
+headings, numbers and prompts, the spacing between diagrams, and the
+proportion of board to text on the page. Nothing that costs ink — no fills,
+frames or ornaments — and still one page of six on A4 and Letter alike.
+
+### 9. More per page, or fewer
+
+ChessMint offers 1, 2, 4, 6 and 12 diagrams to a page. Six is a good default;
+whether teachers want bigger boards for young children, or denser review
+sheets, is a question for users.
+
+---
+
 ## 5 · Later
 
-### 9. Fewer requests per sheet
+### 10. Fewer requests per sheet
 
 Once chess-puzzle-api can look puzzles up in batches ("Look puzzles up in
-batches" in its backlog), a new twelve-puzzle sheet drops from 13 requests to
-two, and a shared link on a cold machine from 24 to two.
+batches" in its backlog), the solutions of a sheet come in one request
+instead of one each.
 
-### 10. A verification script for production
+### 11. A verification script for production
 
 Like chess-puzzle-api's `scripts/verify_production.py`: make a sheet on the
 live service, open its link, and check that the puzzles and solutions it
 prints match the API's.
 
-### 11. A second puzzle type
+### 12. A second puzzle type
 
 The sheet already takes any diagram, prompt, detail and solution. Sudoku or
 mazes are the natural next ones, generated here from a seed so a link stays

@@ -1,3 +1,6 @@
 /target
 .env
 .DS_Store
+
+# The runbook for the live deployment stays off the public repository.
+OPERATING.md

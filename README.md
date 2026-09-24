@@ -87,7 +87,8 @@ each player's own rating.
 | `expert` | 2200+ |
 
 The form and the sheet print the band next to the level, so the number is
-always in sight. Rating and theme are the only criteria, as on Lichess.
+always in sight. A change to the bands is made here and in chess-puzzle-api
+together, or the two disagree about what "beginner" means. Rating and theme are the only criteria, as on Lichess.
 
 ## For language models
 
@@ -106,12 +107,8 @@ leaves PDF to the browser's own print dialog. A request to the API that takes
 longer than 20 seconds becomes an error page rather than a hung browser.
 
 Puzzles and solutions never change between imports, so they are kept in
-memory once fetched, and a sheet's page may be cached by the browser for a
-day. A new twelve-puzzle sheet costs 13 requests to chess-puzzle-api: one to
-pick the puzzles, which brings them along, and one per solution. A shared
-link opened on a freshly started machine costs 24, and reopening a sheet
-costs nothing. The API allows 30 a minute without a key, which is why
-production runs with one.
+memory once fetched, and a sheet's page may be cached by the browser. Picking
+puzzles brings them along, so a new sheet only has to fetch its solutions.
 
 The sheet itself does not know it is chess. A puzzle type supplies a diagram,
 a prompt, a detail line and a solution; the layout and the solutions work the
@@ -134,24 +131,6 @@ cargo test && cargo clippy --all-targets
 
 Tests run against a stand-in for the API that serves two known puzzles: no
 network needed.
-
-## Operating
-
-What the production deployment on Fly needs, for whoever runs it next.
-
-**Stateless.** No volume and nothing to back up: every sheet is rebuilt from
-its URL. The machine stops when idle and starts on the next request, so the
-first visitor after a quiet spell waits for it to boot.
-
-**The API key** is a Fly secret, never in `fly.toml`. It is minted on
-chess-puzzle-api with `keys create`, and setting it restarts the machine:
-```bash
-fly secrets set CHESS_API_KEY=cpa_...
-```
-
-**Levels follow chess-puzzle-api.** The five rating bands are the same in
-both services, so a change to them is made in both, or the trainer and the
-sheets disagree about what "beginner" means.
 
 ## Feedback
 

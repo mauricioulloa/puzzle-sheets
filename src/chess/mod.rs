@@ -29,9 +29,20 @@ pub async fn items(
 
 pub fn item(puzzle: &Puzzle, solution: &Solution, lang: Lang) -> Item {
     let white_to_move = puzzle.solver_color == "white";
+    let text = lang.text();
+    let prompt = goal(&puzzle.themes, text);
+    let side = if white_to_move {
+        text.white_to_move
+    } else {
+        text.black_to_move
+    };
     Item {
-        diagram: board::svg(&puzzle.position_fen, white_to_move),
-        prompt: goal(&puzzle.themes, lang.text()),
+        diagram: board::svg(
+            &puzzle.position_fen,
+            white_to_move,
+            &format!("{side}. {prompt}"),
+        ),
+        prompt,
         detail: Some(puzzle.position_fen.clone()),
         solution: numbered(&solution.solution_san, white_to_move, lang),
     }
@@ -159,6 +170,9 @@ mod tests {
         assert_eq!(item.prompt, "Mate en 1");
         assert_eq!(item.detail.as_deref(), Some(puzzle.position_fen.as_str()));
         assert_eq!(item.solution, "1... Rg2");
-        assert_eq!(item.diagram, board::svg(&puzzle.position_fen, false));
+        assert_eq!(
+            item.diagram,
+            board::svg(&puzzle.position_fen, false, "Juegan las negras. Mate en 1")
+        );
     }
 }

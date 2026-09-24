@@ -3,6 +3,8 @@
 //! no ink, and a small square beside the board saying who moves — filled at
 //! the top when it is Black, empty at the bottom when it is White.
 
+use crate::sheet::escape;
+
 const SQUARE: usize = 45;
 const BOARD: usize = 8 * SQUARE;
 /// Room left of and below the board for the rank and file labels.
@@ -11,6 +13,9 @@ const MARKER: usize = 22;
 const MARKER_GAP: usize = 10;
 const WIDTH: usize = MARGIN + BOARD + MARKER_GAP + MARKER;
 const HEIGHT: usize = BOARD + MARGIN;
+/// Coordinates in viewBox units. At the 58 mm a sheet gives a board, 14 is
+/// about 6 pt: readable by a child, and still inside the margin.
+const LABEL_SIZE: usize = 14;
 
 macro_rules! piece {
     ($code:literal) => {
@@ -46,10 +51,13 @@ pub const DEFS: &str = concat!(
 );
 
 /// Draws the placement field of a FEN, with the side-to-move marker.
-pub fn svg(fen: &str, white_to_move: bool) -> String {
+/// `label` is what a screen reader announces instead of the picture, and is
+/// escaped here.
+pub fn svg(fen: &str, white_to_move: bool, label: &str) -> String {
     let placement = fen.split_whitespace().next().unwrap_or_default();
     let mut out = format!(
-        "<svg viewBox=\"0 0 {WIDTH} {HEIGHT}\" xmlns=\"http://www.w3.org/2000/svg\" role=\"img\">"
+        "<svg viewBox=\"0 0 {WIDTH} {HEIGHT}\" xmlns=\"http://www.w3.org/2000/svg\" role=\"img\"><title>{}</title>",
+        escape(label)
     );
 
     for row in 0..8 {
@@ -99,13 +107,13 @@ pub fn svg(fen: &str, white_to_move: bool) -> String {
 
     for i in 0..8 {
         out.push_str(&format!(
-            "<text x=\"{}\" y=\"{}\" font-size=\"12\" text-anchor=\"middle\" font-family=\"sans-serif\">{}</text>",
+            "<text x=\"{}\" y=\"{}\" font-size=\"{LABEL_SIZE}\" text-anchor=\"middle\" font-family=\"sans-serif\">{}</text>",
             MARGIN / 2,
-            i * SQUARE + SQUARE / 2 + 4,
+            i * SQUARE + SQUARE / 2 + LABEL_SIZE / 3,
             8 - i
         ));
         out.push_str(&format!(
-            "<text x=\"{}\" y=\"{}\" font-size=\"12\" text-anchor=\"middle\" font-family=\"sans-serif\">{}</text>",
+            "<text x=\"{}\" y=\"{}\" font-size=\"{LABEL_SIZE}\" text-anchor=\"middle\" font-family=\"sans-serif\">{}</text>",
             MARGIN + i * SQUARE + SQUARE / 2,
             BOARD + 13,
             char::from(b'a' + i as u8)
@@ -124,9 +132,9 @@ mod tests {
 
     #[test]
     fn draws_every_piece_once() {
-        assert_eq!(svg(START, true).matches("<use ").count(), 32);
+        assert_eq!(svg(START, true, "").matches("<use ").count(), 32);
         assert_eq!(
-            svg("8/8/8/8/8/8/8/K6k w - - 0 1", true)
+            svg("8/8/8/8/8/8/8/K6k w - - 0 1", true, "")
                 .matches("<use ")
                 .count(),
             2
@@ -137,7 +145,7 @@ mod tests {
     fn white_always_sits_at_the_bottom() {
         // The white king on e1: bottom row, fifth file, whoever moves.
         for white_to_move in [true, false] {
-            assert!(svg(START, white_to_move).contains("href=\"#p-wk\" x=\"196\" y=\"315\""));
+            assert!(svg(START, white_to_move, "").contains("href=\"#p-wk\" x=\"196\" y=\"315\""));
         }
     }
 
@@ -149,15 +157,21 @@ mod tests {
                 .unwrap();
             board[at..].split("/>").next().unwrap().to_string()
         };
-        let white = marker(&svg(START, true));
+        let white = marker(&svg(START, true, ""));
         assert!(white.contains("y=\"338\"") && white.contains("fill=\"#fff\""));
-        let black = marker(&svg(START, false));
+        let black = marker(&svg(START, false, ""));
         assert!(black.contains("y=\"0\"") && black.contains("fill=\"#000\""));
     }
 
     #[test]
+    fn a_screen_reader_hears_the_label_not_the_picture() {
+        let board = svg(START, true, "White to move. <Mate> in 1");
+        assert!(board.contains("role=\"img\"><title>White to move. &lt;Mate&gt; in 1</title>"));
+    }
+
+    #[test]
     fn dark_squares_are_hatched_not_filled() {
-        let board = svg(START, true);
+        let board = svg(START, true, "");
         assert_eq!(board.matches("url(#hatch)").count(), 32);
         assert!(DEFS.contains("<pattern id=\"hatch\""));
         assert_eq!(DEFS.matches("<symbol ").count(), 12);

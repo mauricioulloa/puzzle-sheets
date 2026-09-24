@@ -64,6 +64,16 @@ h1 { font-size: 17pt; margin: 0; }
 
 .credit { margin: 2mm 0 0; font-size: 6.5pt; text-align: center; color: #333; }
 
+/* On a phone the sheet is read, not printed, and the link usually arrives
+   through a messaging app: one column as wide as the screen. Printing keeps
+   the millimetres above, since this block is for screens only. */
+@media screen and (max-width: 200mm) {
+  .page { width: auto; height: auto; margin: 0 8px 16px; padding: 16px 12px; }
+  .grid { grid-template-columns: 1fr; grid-template-rows: none; gap: 20px; }
+  .item svg { flex: none; max-height: none; }
+  .item .detail { white-space: normal; word-break: break-all; font-size: 8pt; }
+}
+
 @media print {
   body { background: none; }
   .toolbar { display: none; }

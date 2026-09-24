@@ -64,6 +64,8 @@ pub struct Text {
     pub service_busy: &'static str,
     pub seconds: &'static str,
     pub back: &'static str,
+    pub white_to_move: &'static str,
+    pub black_to_move: &'static str,
 }
 
 static ES: Text = Text {
@@ -86,6 +88,8 @@ static ES: Text = Text {
     service_busy: "El servicio de ejercicios está ocupado. Inténtalo de nuevo en",
     seconds: "segundos",
     back: "Volver al formulario",
+    white_to_move: "Juegan las blancas",
+    black_to_move: "Juegan las negras",
 };
 
 static EN: Text = Text {
@@ -108,6 +112,8 @@ static EN: Text = Text {
     service_busy: "The puzzle service is busy. Try again in",
     seconds: "seconds",
     back: "Back to the form",
+    white_to_move: "White to move",
+    black_to_move: "Black to move",
 };
 
 #[cfg(test)]

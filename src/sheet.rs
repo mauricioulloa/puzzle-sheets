@@ -65,6 +65,12 @@ pub struct Sheet {
 
 const STYLE: &str = include_str!("web/sheet.css");
 
+/// The page's only script. Its hash is in the Content-Security-Policy
+/// (`web::routes::CONTENT_SECURITY_POLICY`), so it runs and nothing else does;
+/// change one and a test says to change the other.
+pub const PRINT_SCRIPT: &str =
+    "document.getElementById('print').addEventListener('click', () => window.print());";
+
 pub fn render(sheet: &Sheet) -> String {
     let text = sheet.lang.text();
     let title = escape(&sheet.title);
@@ -109,9 +115,10 @@ pub fn render(sheet: &Sheet) -> String {
 <style>{STYLE}</style>
 </head>
 <body>
-<nav class="toolbar"><button onclick="window.print()">{print}</button><a href="{again}">{again_label}</a></nav>
+<nav class="toolbar"><button id="print" type="button">{print}</button><a href="{again}">{again_label}</a></nav>
 {defs}
 {body}
+<script>{PRINT_SCRIPT}</script>
 </body>
 </html>
 "#,

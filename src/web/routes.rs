@@ -2,13 +2,24 @@ use crate::chess::api::ChessApi;
 use crate::mcp::SheetTools;
 use crate::web::handlers;
 use axum::Router;
+use axum::http::{HeaderName, HeaderValue, header};
 use axum::routing::get;
 use rmcp::transport::streamable_http_server::StreamableHttpService;
 use rmcp::transport::streamable_http_server::session::never::NeverSessionManager;
 use rmcp::transport::streamable_http_server::tower::StreamableHttpServerConfig;
 use std::sync::Arc;
 use tower_http::compression::CompressionLayer;
+use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
+
+/// Everything is served from here and inline: no fonts, images or scripts
+/// from elsewhere. Styles are inline throughout; the one script, the print
+/// button's, is allowed by its hash (`sheet::PRINT_SCRIPT`). Nothing may
+/// frame a page, and the form may only submit here.
+pub const CONTENT_SECURITY_POLICY: &str = "default-src 'none'; \
+     style-src 'unsafe-inline'; \
+     script-src 'sha256-oYck0c9qZYrrxfvezOkNwW1dNWvK66v0jMpd+ak28kE='; \
+     img-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
 
 pub struct AppState {
     pub api: ChessApi,
@@ -47,4 +58,19 @@ pub fn router(state: SharedState, mcp_allowed_hosts: &[String]) -> Router {
         .with_state(state)
         .layer(TraceLayer::new_for_http())
         .layer(CompressionLayer::new())
+        .layer(header_layer(
+            header::CONTENT_SECURITY_POLICY,
+            CONTENT_SECURITY_POLICY,
+        ))
+        .layer(header_layer(header::X_CONTENT_TYPE_OPTIONS, "nosniff"))
+        // A sheet's URL can carry a class name in its title; a link out of
+        // the page should say only which site it came from.
+        .layer(header_layer(
+            header::REFERRER_POLICY,
+            "strict-origin-when-cross-origin",
+        ))
+}
+
+fn header_layer(name: HeaderName, value: &'static str) -> SetResponseHeaderLayer<HeaderValue> {
+    SetResponseHeaderLayer::if_not_present(name, HeaderValue::from_static(value))
 }

@@ -6,8 +6,13 @@ mod common;
 use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode, header};
+use base64::Engine;
+use base64::engine::general_purpose::STANDARD;
 use common::{BUSY_ID, BUSY_RETRY_AFTER, PUBLIC_URL, app, app_against};
 use http_body_util::BodyExt;
+use puzzle_sheets::sheet::PRINT_SCRIPT;
+use puzzle_sheets::web::routes::CONTENT_SECURITY_POLICY;
+use sha2::{Digest, Sha256};
 use tower::ServiceExt;
 
 struct Answer {
@@ -346,4 +351,46 @@ async fn a_sheet_may_be_kept_but_an_error_may_not() {
 
     let response = request(&app, "/sheet?ids=nope1", None).await;
     assert_eq!(response.cache_control, None);
+}
+
+#[tokio::test]
+async fn every_page_carries_the_security_headers() {
+    let (app, _) = app().await;
+    for uri in ["/", "/sheet?ids=00008", "/sheet?ids=nope1", "/llms.txt"] {
+        let response = app
+            .clone()
+            .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        let headers = response.headers();
+        assert_eq!(
+            headers[header::CONTENT_SECURITY_POLICY],
+            CONTENT_SECURITY_POLICY,
+            "{uri}"
+        );
+        assert_eq!(headers[header::X_CONTENT_TYPE_OPTIONS], "nosniff", "{uri}");
+        assert_eq!(
+            headers[header::REFERRER_POLICY],
+            "strict-origin-when-cross-origin",
+            "{uri}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn the_print_button_is_the_one_script_allowed_to_run() {
+    let digest = STANDARD.encode(Sha256::digest(PRINT_SCRIPT.as_bytes()));
+    assert!(
+        CONTENT_SECURITY_POLICY.contains(&format!("'sha256-{digest}'")),
+        "the policy must carry the script's hash, sha256-{digest}"
+    );
+
+    let (app, _) = app().await;
+    let (_, html, _) = get_page(&app, "/sheet?ids=00008").await;
+    assert!(html.contains(&format!("<script>{PRINT_SCRIPT}</script>")));
+    assert_eq!(html.matches("<script").count(), 1);
+    assert!(
+        !html.contains("onclick"),
+        "inline handlers would be blocked"
+    );
 }

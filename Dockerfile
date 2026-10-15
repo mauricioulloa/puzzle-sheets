@@ -1,6 +1,6 @@
 # Build stage. Debian rather than Alpine on purpose: the rustls crypto
 # provider compiles C, and glibc keeps that boring.
-FROM rust:1.98-bookworm AS builder
+FROM rust:1.99-bookworm AS builder
 
 WORKDIR /build
 
